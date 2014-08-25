@@ -13,11 +13,17 @@ import (
 
 	"github.com/ant0ine/go-json-rest/rest"
 	"github.com/rakyll/globalconf"
+	"github.com/milosgajdos83/tenus"
 )
 
+const (
+	appName = "surysys"
+	)
+
 var (
-	flagSocket = flag.String("socket", "/var/run/surysys", "Path for unix socket")
+	flagSocket = flag.String("socket", "/var/run/" + appName, "Path for unix socket")
 	flagOwner  = flag.String("owner", "", "Ownership for socket")
+	flagGroup  = flag.Int("group", -1, "Group for socket")
 	// flagMode   = flag.Int("mode", 0640, "FileMode for socket")
 )
 
@@ -25,8 +31,13 @@ type Message struct {
 	Body string
 }
 
+type Iface struct {
+	Name string
+	Ip string
+}
+
 func main() {
-	conf, err := globalconf.New("myapp")
+	conf, err := globalconf.New(appName)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -34,15 +45,14 @@ func main() {
 
 	handler := rest.ResourceHandler{}
 	err = handler.SetRoutes(
-		&rest.Route{"GET", "/message", func(w rest.ResponseWriter, req *rest.Request) {
-			w.WriteJson(&Message{
-				Body: "Hello World!",
-			})
-		}},
+		&rest.Route{"GET", "/message", Hello},
+		&rest.Route{"GET", "/interfaces/:iface", GetIface},
+		&rest.Route{"POST", "/interfaces", PostIface},
 	)
 	if err != nil {
 		log.Fatal(err)
 	}
+
 	ln, err := net.Listen("unix", *flagSocket)
 	if err != nil {
 		log.Fatal(err)
@@ -54,7 +64,12 @@ func main() {
 			log.Fatal(err)
 		}
 		uid, err := strconv.Atoi(user.Uid)
-		gid, err := strconv.Atoi(user.Gid)
+		var gid int
+		if *flagGroup != -1 {
+			gid = *flagGroup
+		} else {
+			gid, err = strconv.Atoi(user.Gid)
+		}
 		if err := os.Chown(*flagSocket, uid, gid); err != nil {
 			log.Fatal(err)
 		}
@@ -79,4 +94,54 @@ func main() {
 	}(sigc)
 
 	log.Fatal(http.Serve(ln, &handler))
+}
+
+
+func Hello(w rest.ResponseWriter, req *rest.Request) {
+	w.WriteJson(&Message{
+		Body: "Hello World!",
+	})
+}
+
+func GetIface(w rest.ResponseWriter, req *rest.Request) {
+	iface, err := net.InterfaceByName(req.PathParam("iface"))
+	if err != nil {
+		log.Printf(err.Error())
+		rest.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	ip, err := iface.Addrs()
+	if err != nil {
+		log.Printf(err.Error())
+		rest.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.WriteJson(ip)
+}
+
+func PostIface(w rest.ResponseWriter, req *rest.Request) {
+	iface := Iface{}
+  if err := req.DecodeJsonPayload(&iface); err != nil {
+		log.Printf(err.Error())
+		rest.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	ip, ipnet, err := net.ParseCIDR(iface.Ip)
+	if err != nil {
+		log.Printf(err.Error())
+		rest.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	link, err := tenus.NewLink(iface.Name)
+	if err != nil {
+		log.Printf(err.Error())
+		rest.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if err := link.SetLinkIp(ip, ipnet); err != nil {
+		log.Printf(err.Error())
+		rest.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.WriteJson(ipnet)
 }
