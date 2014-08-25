@@ -13,7 +13,8 @@ import (
 
 	"github.com/ant0ine/go-json-rest/rest"
 	"github.com/rakyll/globalconf"
-	"github.com/milosgajdos83/tenus"
+	"github.com/docker/libcontainer/netlink"
+	"github.com/steveyen/gkvlite"
 )
 
 const (
@@ -24,6 +25,7 @@ var (
 	flagSocket = flag.String("socket", "/var/run/" + appName, "Path for unix socket")
 	flagOwner  = flag.String("owner", "", "Ownership for socket")
 	flagGroup  = flag.Int("group", -1, "Group for socket")
+	flagDB     = flag.String("db", "/var/lib/" + appName + "/db.gkvlite", "Path for DB")
 	// flagMode   = flag.Int("mode", 0640, "FileMode for socket")
 )
 
@@ -31,8 +33,8 @@ type Message struct {
 	Body string
 }
 
-type Iface struct {
-	Name string
+type Address struct {
+	Link string
 	Ip string
 }
 
@@ -47,7 +49,7 @@ func main() {
 	err = handler.SetRoutes(
 		&rest.Route{"GET", "/message", Hello},
 		&rest.Route{"GET", "/interfaces/:iface", GetIface},
-		&rest.Route{"POST", "/interfaces", PostIface},
+		&rest.Route{"POST", "/address", PostAddress},
 	)
 	if err != nil {
 		log.Fatal(err)
@@ -119,29 +121,42 @@ func GetIface(w rest.ResponseWriter, req *rest.Request) {
 	w.WriteJson(ip)
 }
 
-func PostIface(w rest.ResponseWriter, req *rest.Request) {
-	iface := Iface{}
-  if err := req.DecodeJsonPayload(&iface); err != nil {
+func PostAddress(w rest.ResponseWriter, req *rest.Request) {
+	address := Address{}
+  if err := req.DecodeJsonPayload(&address); err != nil {
 		log.Printf(err.Error())
 		rest.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	ip, ipnet, err := net.ParseCIDR(iface.Ip)
+	ip, ipnet, err := net.ParseCIDR(address.Ip)
 	if err != nil {
 		log.Printf(err.Error())
 		rest.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	link, err := tenus.NewLink(iface.Name)
+	iface, err := net.InterfaceByName(address.Link)
 	if err != nil {
 		log.Printf(err.Error())
 		rest.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	if err := link.SetLinkIp(ip, ipnet); err != nil {
+  if err :=netlink.NetworkLinkAddIp(iface, ip, ipnet); err != nil {
 		log.Printf(err.Error())
 		rest.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	w.WriteJson(ipnet)
+	w.WriteJson(address)
+}
+
+func dbAdress() (c *gkvlite.Collection, err error) {
+	f, err := os.OpenFile(*flagDB, os.O_RDWR|os.O_CREATE, 0640)
+	if err != nil {
+		return
+	}
+	s, err := gkvlite.NewStore(f)
+	if err != nil {
+		return
+	}
+	c = s.GetCollection("Address")
+	return
 }
