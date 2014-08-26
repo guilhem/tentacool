@@ -55,6 +55,7 @@ func main() {
 		&rest.Route{"GET", "/interfaces/:iface", GetIface},
 		&rest.Route{"POST", "/address", PostAddress},
 		&rest.Route{"Get", "/address/:address", GetAddress},
+		&rest.Route{"GET", "/routes", GetRoutes},
 	)
 	if err != nil {
 		log.Fatal(err)
@@ -189,4 +190,14 @@ func PostAddress(w rest.ResponseWriter, req *rest.Request) {
 		return
 	})
 	w.WriteJson(address)
+}
+
+func GetRoutes(w rest.ResponseWriter, req *rest.Request) {
+	routes, err := netlink.NetworkGetRoutes()
+	if err != nil {
+		log.Printf(err.Error())
+		rest.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.WriteJson(routes)
 }
