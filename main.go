@@ -196,10 +196,5 @@ func PostAddress(w rest.ResponseWriter, req *rest.Request) {
 		err = b.Put([]byte(address.ID), []byte(data))
 		return
 	})
-	db.View(func(tx *bolt.Tx) error {
-		value := tx.Bucket([]byte(addressBucket)).Get([]byte(address.ID))
-		log.Printf("The value of 'toto' is: %s\n", value)
-		return nil
-	})
 	w.WriteJson(address)
 }
