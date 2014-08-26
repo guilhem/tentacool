@@ -176,6 +176,8 @@ func PostAddress(w rest.ResponseWriter, req *rest.Request) {
 		rest.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	_ = netlink.AddRoute("", address.IP, "", address.Link)
+
 	db.Update(func(tx *bolt.Tx) (err error) {
 		b := tx.Bucket([]byte(addressBucket))
 		if address.ID == "" {
