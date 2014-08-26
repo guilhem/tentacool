@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"flag"
 	"log"
 	"net"
@@ -10,32 +11,34 @@ import (
 	"os/user"
 	"strconv"
 	"syscall"
+	"time"
 
 	"github.com/ant0ine/go-json-rest/rest"
-	"github.com/rakyll/globalconf"
+	"github.com/boltdb/bolt"
 	"github.com/docker/libcontainer/netlink"
-	"github.com/steveyen/gkvlite"
+	"github.com/rakyll/globalconf"
 )
 
 const (
-	appName = "surysys"
-	)
-
-var (
-	flagSocket = flag.String("socket", "/var/run/" + appName, "Path for unix socket")
-	flagOwner  = flag.String("owner", "", "Ownership for socket")
-	flagGroup  = flag.Int("group", -1, "Group for socket")
-	flagDB     = flag.String("db", "/var/lib/" + appName + "/db.gkvlite", "Path for DB")
-	// flagMode   = flag.Int("mode", 0640, "FileMode for socket")
+	appName       = "tentacool"
+	addressBucket = "address"
 )
 
-type Message struct {
-	Body string
-}
+var (
+	flagSocket = flag.String("socket", "/var/run/"+appName, "Path for unix socket")
+	flagOwner  = flag.String("owner", "", "Ownership for socket")
+	flagGroup  = flag.Int("group", -1, "Group for socket")
+	flagDB     = flag.String("db", "/var/lib/"+appName+"/db", "Path for DB")
+	// flagMode   = flag.Int("mode", 0640, "FileMode for socket")
+
+	db *bolt.DB
+	ln net.Listener
+)
 
 type Address struct {
+	ID   string
 	Link string
-	Ip string
+	IP   string
 }
 
 func main() {
@@ -47,16 +50,16 @@ func main() {
 
 	handler := rest.ResourceHandler{}
 	err = handler.SetRoutes(
-		&rest.Route{"GET", "/message", Hello},
 		&rest.Route{"GET", "/interfaces/:iface", GetIface},
 		&rest.Route{"POST", "/address", PostAddress},
+		&rest.Route{"Get", "/address/:address", GetAddress},
 	)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	ln, err := net.Listen("unix", *flagSocket)
-	if err != nil {
+	ln, err = net.Listen("unix", *flagSocket)
+	if nil != err {
 		log.Fatal(err)
 	}
 
@@ -76,11 +79,6 @@ func main() {
 			log.Fatal(err)
 		}
 	}
-	// if err := os.Chmod(*flagSocket, *flagMode); err != nil {
-	// 	log.Fatal(err)
-	// }
-
-	// Unix sockets must be unlink()ed before being reused again.
 
 	// Handle common process-killing signals so we can gracefully shut down:
 	sigc := make(chan os.Signal, 1)
@@ -91,18 +89,25 @@ func main() {
 		log.Printf("Caught signal %s: shutting down.", sig)
 		// Stop listening (and unlink the socket if unix type):
 		ln.Close()
-		// And we're done:
+		db.Close()
 		os.Exit(0)
 	}(sigc)
 
-	log.Fatal(http.Serve(ln, &handler))
-}
-
-
-func Hello(w rest.ResponseWriter, req *rest.Request) {
-	w.WriteJson(&Message{
-		Body: "Hello World!",
+	db, err = bolt.Open(*flagDB, 0600, &bolt.Options{Timeout: 1 * time.Second})
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer db.Close()
+	db.Update(func(tx *bolt.Tx) (err error) {
+		_, err = tx.CreateBucketIfNotExists([]byte(addressBucket))
+		if err != nil {
+			log.Fatal(err)
+		}
+		return
 	})
+
+	log.Fatal(http.Serve(ln, &handler))
+	defer ln.Close()
 }
 
 func GetIface(w rest.ResponseWriter, req *rest.Request) {
@@ -121,14 +126,29 @@ func GetIface(w rest.ResponseWriter, req *rest.Request) {
 	w.WriteJson(ip)
 }
 
+func GetAddress(w rest.ResponseWriter, req *rest.Request) {
+	id := req.PathParam("address")
+
+	address := Address{}
+	db.View(func(tx *bolt.Tx) (err error) {
+		tmp := tx.Bucket([]byte(addressBucket)).Get([]byte(id))
+		if err = json.Unmarshal(tmp, &address); err != nil {
+			log.Printf(err.Error())
+			rest.Error(w, err.Error(), http.StatusInternalServerError)
+		}
+		return
+	})
+	w.WriteJson(address)
+}
+
 func PostAddress(w rest.ResponseWriter, req *rest.Request) {
 	address := Address{}
-  if err := req.DecodeJsonPayload(&address); err != nil {
+	if err := req.DecodeJsonPayload(&address); err != nil {
 		log.Printf(err.Error())
 		rest.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	ip, ipnet, err := net.ParseCIDR(address.Ip)
+	ip, ipnet, err := net.ParseCIDR(address.IP)
 	if err != nil {
 		log.Printf(err.Error())
 		rest.Error(w, err.Error(), http.StatusInternalServerError)
@@ -140,23 +160,35 @@ func PostAddress(w rest.ResponseWriter, req *rest.Request) {
 		rest.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-  if err :=netlink.NetworkLinkAddIp(iface, ip, ipnet); err != nil {
+	if err := netlink.NetworkLinkAddIp(iface, ip, ipnet); err != nil {
 		log.Printf(err.Error())
 		rest.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	db.Update(func(tx *bolt.Tx) (err error) {
+		b := tx.Bucket([]byte(addressBucket))
+		if address.ID == "" {
+			int, err := b.NextSequence()
+			if err != nil {
+				log.Printf(err.Error())
+				rest.Error(w, err.Error(), http.StatusInternalServerError)
+				return err
+			}
+			address.ID = strconv.FormatUint(int, 10)
+		}
+		data, err := json.Marshal(address)
+		if err != nil {
+			log.Printf(err.Error())
+			rest.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		err = b.Put([]byte(address.ID), []byte(data))
+		return
+	})
+	db.View(func(tx *bolt.Tx) error {
+		value := tx.Bucket([]byte(addressBucket)).Get([]byte(address.ID))
+		log.Printf("The value of 'toto' is: %s\n", value)
+		return nil
+	})
 	w.WriteJson(address)
-}
-
-func dbAdress() (c *gkvlite.Collection, err error) {
-	f, err := os.OpenFile(*flagDB, os.O_RDWR|os.O_CREATE, 0640)
-	if err != nil {
-		return
-	}
-	s, err := gkvlite.NewStore(f)
-	if err != nil {
-		return
-	}
-	c = s.GetCollection("Address")
-	return
 }
