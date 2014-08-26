@@ -50,6 +50,7 @@ func main() {
 
 	handler := rest.ResourceHandler{}
 	err = handler.SetRoutes(
+		&rest.Route{"GET", "/interfaces", GetIfaces},
 		&rest.Route{"GET", "/interfaces/:iface", GetIface},
 		&rest.Route{"POST", "/address", PostAddress},
 		&rest.Route{"Get", "/address/:address", GetAddress},
@@ -108,6 +109,16 @@ func main() {
 
 	log.Fatal(http.Serve(ln, &handler))
 	defer ln.Close()
+}
+
+func GetIfaces(w rest.ResponseWriter, req *rest.Request) {
+	interfaces, err := net.Interfaces()
+	if err != nil {
+		log.Printf(err.Error())
+		rest.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.WriteJson(interfaces)
 }
 
 func GetIface(w rest.ResponseWriter, req *rest.Request) {
