@@ -16,6 +16,7 @@ import (
 	"github.com/ant0ine/go-json-rest/rest"
 	"github.com/boltdb/bolt"
 	"github.com/docker/libcontainer/netlink"
+	"github.com/docker/libcontainer/network"
 	"github.com/rakyll/globalconf"
 )
 
@@ -159,23 +160,12 @@ func PostAddress(w rest.ResponseWriter, req *rest.Request) {
 		rest.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	ip, ipnet, err := net.ParseCIDR(address.IP)
-	if err != nil {
+	if err := network.SetInterfaceIp(address.Link, address.IP); err != nil {
 		log.Printf(err.Error())
 		rest.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	iface, err := net.InterfaceByName(address.Link)
-	if err != nil {
-		log.Printf(err.Error())
-		rest.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	if err := netlink.NetworkLinkAddIp(iface, ip, ipnet); err != nil {
-		log.Printf(err.Error())
-		rest.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
+
 	_ = netlink.AddRoute("", address.IP, "", address.Link)
 
 	db.Update(func(tx *bolt.Tx) (err error) {
