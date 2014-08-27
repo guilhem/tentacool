@@ -37,9 +37,9 @@ var (
 )
 
 type Address struct {
-	ID   string
-	Link string
-	IP   string
+	ID   string `json:"id"`
+	Link string `json:"link"`
+	IP   string `json:"ip"`
 }
 
 func main() {
