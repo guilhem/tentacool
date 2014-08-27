@@ -53,8 +53,9 @@ func main() {
 	err = handler.SetRoutes(
 		&rest.Route{"GET", "/interfaces", GetIfaces},
 		&rest.Route{"GET", "/interfaces/:iface", GetIface},
-		&rest.Route{"POST", "/address", PostAddress},
-		&rest.Route{"GET", "/address/:address", GetAddress},
+		&rest.Route{"GET", "/addresses", GetAddresses},
+		&rest.Route{"POST", "/addresses", PostAddress},
+		&rest.Route{"GET", "/addresses/:address", GetAddress},
 		&rest.Route{"GET", "/routes", GetRoutes},
 	)
 	if err != nil {
@@ -153,6 +154,29 @@ func GetIface(w rest.ResponseWriter, req *rest.Request) {
 		return
 	}
 	w.WriteJson(ip)
+}
+
+func GetAddresses(w rest.ResponseWriter, req *rest.Request) {
+	addresses := []Address{}
+	err := db.View(func(tx *bolt.Tx) (err error) {
+		b := tx.Bucket([]byte(addressBucket))
+		address := Address{}
+		b.ForEach(func(k, v []byte) (err error) {
+			err = json.Unmarshal(v, &address)
+			if err != nil {
+				return
+			}
+			addresses = append(addresses, address)
+			return
+		})
+		return
+	})
+	if err != nil {
+		log.Printf(err.Error())
+		rest.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.WriteJson(addresses)
 }
 
 func GetAddress(w rest.ResponseWriter, req *rest.Request) {
