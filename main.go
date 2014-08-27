@@ -54,7 +54,7 @@ func main() {
 		&rest.Route{"GET", "/interfaces", GetIfaces},
 		&rest.Route{"GET", "/interfaces/:iface", GetIface},
 		&rest.Route{"POST", "/address", PostAddress},
-		&rest.Route{"Get", "/address/:address", GetAddress},
+		&rest.Route{"GET", "/address/:address", GetAddress},
 		&rest.Route{"GET", "/routes", GetRoutes},
 	)
 	if err != nil {
