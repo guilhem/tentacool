@@ -109,6 +109,22 @@ func main() {
 		return
 	})
 
+	log.Printf("Reinstall previous address from DB")
+	db.View(func(tx *bolt.Tx) (err error) {
+    b := tx.Bucket([]byte(addressBucket))
+		address := Address{}
+    b.ForEach(func(k, v []byte) (err error) {
+			if err := json.Unmarshal(v, &address); err != nil {
+				log.Printf(err.Error())
+			}
+			if err:=SetIP(address); err != nil {
+        log.Printf(err.Error())
+			}
+			return
+    })
+    return
+	})
+
 	log.Fatal(http.Serve(ln, &handler))
 	defer ln.Close()
 }
@@ -161,13 +177,12 @@ func PostAddress(w rest.ResponseWriter, req *rest.Request) {
 		rest.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	if err := network.SetInterfaceIp(address.Link, address.IP); err != nil {
+
+	if err := SetIP(address); err != nil {
 		log.Printf(err.Error())
 		rest.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-
-	_ = netlink.AddRoute("", address.IP, "", address.Link)
 
 	db.Update(func(tx *bolt.Tx) (err error) {
 		b := tx.Bucket([]byte(addressBucket))
@@ -200,4 +215,15 @@ func GetRoutes(w rest.ResponseWriter, req *rest.Request) {
 		return
 	}
 	w.WriteJson(routes)
+}
+
+func SetIP(a Address) (err error) {
+	log.Printf("Set IP:%s, to:%s", a.IP, a.Link)
+	err = network.SetInterfaceIp(a.Link, a.IP)
+	if err != nil {
+		return
+	}
+	log.Printf("Adding route for this address")
+	_ = netlink.AddRoute("", a.IP, "", a.Link)
+	return
 }
