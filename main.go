@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"flag"
 	"log"
 	"net"
@@ -181,16 +182,17 @@ func GetAddresses(w rest.ResponseWriter, req *rest.Request) {
 
 func GetAddress(w rest.ResponseWriter, req *rest.Request) {
 	id := req.PathParam("address")
-
 	address := Address{}
-	db.View(func(tx *bolt.Tx) (err error) {
+	err := db.View(func(tx *bolt.Tx) (err error) {
 		tmp := tx.Bucket([]byte(addressBucket)).Get([]byte(id))
-		if err = json.Unmarshal(tmp, &address); err != nil {
-			log.Printf(err.Error())
-			rest.Error(w, err.Error(), http.StatusInternalServerError)
-		}
+		err = json.Unmarshal(tmp, &address)
 		return
 	})
+	if err != nil {
+		log.Printf(err.Error())
+		rest.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 	w.WriteJson(address)
 }
 
@@ -208,26 +210,34 @@ func PostAddress(w rest.ResponseWriter, req *rest.Request) {
 		return
 	}
 
-	db.Update(func(tx *bolt.Tx) (err error) {
+	err := db.Update(func(tx *bolt.Tx) (err error) {
 		b := tx.Bucket([]byte(addressBucket))
 		if address.ID == "" {
 			int, err := b.NextSequence()
 			if err != nil {
-				log.Printf(err.Error())
-				rest.Error(w, err.Error(), http.StatusInternalServerError)
 				return err
 			}
 			address.ID = strconv.FormatUint(int, 10)
+		} else {
+			if _, err := strconv.ParseUint(address.ID, 10, 64); err == nil {
+				return errors.New("ID is an integer")
+			}
+			if a := b.Get([]byte(address.ID)); a != nil {
+				return errors.New("ID exists")
+			}
 		}
 		data, err := json.Marshal(address)
 		if err != nil {
-			log.Printf(err.Error())
-			rest.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 		err = b.Put([]byte(address.ID), []byte(data))
 		return
 	})
+	if err != nil {
+		log.Printf(err.Error())
+		rest.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 	w.WriteJson(address)
 }
 
