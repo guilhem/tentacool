@@ -57,6 +57,7 @@ func main() {
 		&rest.Route{"GET", "/addresses", GetAddresses},
 		&rest.Route{"POST", "/addresses", PostAddress},
 		&rest.Route{"GET", "/addresses/:address", GetAddress},
+		&rest.Route{"PUT", "/addresses/:address", PutAddress},
 		&rest.Route{"DELETE", "/addresses/:address", DeleteAddress},
 		&rest.Route{"GET", "/routes", GetRoutes},
 	)
@@ -234,9 +235,36 @@ func PostAddress(w rest.ResponseWriter, req *rest.Request) {
 	}
 
 	if err := SetIP(address); err != nil {
+		w.Header().Set("X-ERROR", err.Error())
+	}
+	w.WriteJson(address)
+}
+
+func PutAddress(w rest.ResponseWriter, req *rest.Request) {
+	address := Address{}
+	if err := req.DecodeJsonPayload(&address); err != nil {
 		log.Printf(err.Error())
 		rest.Error(w, err.Error(), http.StatusInternalServerError)
 		return
+	}
+	address.ID = req.PathParam("address")
+	err := db.Update(func(tx *bolt.Tx) (err error) {
+		b := tx.Bucket([]byte(addressBucket))
+		data, err := json.Marshal(address)
+		if err != nil {
+			return
+		}
+		err = b.Put([]byte(address.ID), []byte(data))
+		return
+	})
+	if err != nil {
+		log.Printf(err.Error())
+		rest.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if err := SetIP(address); err != nil {
+		w.Header().Set("X-ERROR", err.Error())
 	}
 	w.WriteJson(address)
 }
