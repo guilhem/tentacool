@@ -57,6 +57,7 @@ func main() {
 		&rest.Route{"GET", "/addresses", GetAddresses},
 		&rest.Route{"POST", "/addresses", PostAddress},
 		&rest.Route{"GET", "/addresses/:address", GetAddress},
+		&rest.Route{"DELETE", "/addresses/:address", DeleteAddress},
 		&rest.Route{"GET", "/routes", GetRoutes},
 	)
 	if err != nil {
@@ -238,6 +239,20 @@ func PostAddress(w rest.ResponseWriter, req *rest.Request) {
 		return
 	}
 	w.WriteJson(address)
+}
+
+func DeleteAddress(w rest.ResponseWriter, req *rest.Request) {
+	id := req.PathParam("address")
+	err := db.Update(func(tx *bolt.Tx) (err error) {
+		err = tx.Bucket([]byte(addressBucket)).Delete([]byte(id))
+		return
+	})
+	if err != nil {
+		log.Printf(err.Error())
+		rest.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.WriteHeader(http.StatusOK)
 }
 
 func GetRoutes(w rest.ResponseWriter, req *rest.Request) {
