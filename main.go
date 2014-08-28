@@ -27,7 +27,7 @@ const (
 )
 
 var (
-	flagSocket = flag.String("socket", "/var/run/"+appName, "Path for unix socket")
+	flagBind   = flag.String("bind", "/var/run/"+appName, "Adress to bind. Format Path or IP:PORT")
 	flagOwner  = flag.String("owner", "", "Ownership for socket")
 	flagGroup  = flag.Int("group", -1, "Group for socket")
 	flagDB     = flag.String("db", "/var/lib/"+appName+"/db", "Path for DB")
@@ -65,12 +65,18 @@ func main() {
 		log.Fatal(err)
 	}
 
-	ln, err = net.Listen("unix", *flagSocket)
+	var network string
+	if _, err = net.ResolveTCPAddr("tcp", *flagBind); err == nil {
+		network = "tcp"
+	} else {
+		network = "unix"
+	}
+	ln, err = net.Listen(network, *flagBind)
 	if nil != err {
 		log.Fatal(err)
 	}
 
-	if *flagOwner != "" {
+	if *flagOwner != "" && network == "unix" {
 		user, err := user.Lookup(*flagOwner)
 		if err != nil {
 			log.Fatal(err)
@@ -82,7 +88,7 @@ func main() {
 		} else {
 			gid, err = strconv.Atoi(user.Gid)
 		}
-		if err := os.Chown(*flagSocket, uid, gid); err != nil {
+		if err := os.Chown(*flagBind, uid, gid); err != nil {
 			log.Fatal(err)
 		}
 	}
