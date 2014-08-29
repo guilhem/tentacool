@@ -1,6 +1,12 @@
+[target]
+path = github.com/optiflows/tentacool
+
 [deps]
 github.com/ant0ine/go-json-rest = 
 github.com/imdario/mergo = 
+github.com/boltdb/bolt = 
+github.com/docker/libcontainer = 
+github.com/rakyll/globalconf = 
 
 [res]
 include = 
