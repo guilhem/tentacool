@@ -16,7 +16,6 @@ import (
 	"github.com/ant0ine/go-json-rest/rest"
 	"github.com/boltdb/bolt"
 	"github.com/docker/libcontainer/netlink"
-	"github.com/docker/libcontainer/network"
 	"github.com/rakyll/globalconf"
 )
 
@@ -58,6 +57,7 @@ func main() {
 		&rest.Route{"POST", "/dns", PostDNS},
 
 		&rest.Route{"GET", "/routes", GetRoutes},
+		&rest.Route{"POST", "/routes/gateway", PostGateway},
 	)
 	if err != nil {
 		log.Fatal(err)
@@ -171,4 +171,24 @@ func GetRoutes(w rest.ResponseWriter, req *rest.Request) {
 		return
 	}
 	w.WriteJson(routes)
+}
+
+type Gateway struct {
+	IP   string `json:"ip"`
+	Link string `json:"link"`
+}
+
+func PostGateway(w rest.ResponseWriter, req *rest.Request) {
+	gateway := Gateway{}
+	if err := req.DecodeJsonPayload(&gateway); err != nil {
+		log.Printf(err.Error())
+		rest.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if err := netlink.AddDefaultGw(gateway.IP, gateway.Link); err != nil {
+		log.Printf(err.Error())
+		rest.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.WriteJson(gateway)
 }

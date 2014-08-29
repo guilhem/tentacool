@@ -10,6 +10,7 @@ import (
 	"github.com/ant0ine/go-json-rest/rest"
 	"github.com/boltdb/bolt"
 	"github.com/docker/libcontainer/netlink"
+	"github.com/docker/libcontainer/network"
 )
 
 type Address struct {
