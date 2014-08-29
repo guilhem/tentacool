@@ -27,10 +27,10 @@ const (
 )
 
 var (
-	flagBind   = flag.String("bind", "/var/run/"+appName, "Adress to bind. Format Path or IP:PORT")
-	flagOwner  = flag.String("owner", "", "Ownership for socket")
-	flagGroup  = flag.Int("group", -1, "Group for socket")
-	flagDB     = flag.String("db", "/var/lib/"+appName+"/db", "Path for DB")
+	flagBind  = flag.String("bind", "/var/run/"+appName, "Adress to bind. Format Path or IP:PORT")
+	flagOwner = flag.String("owner", "", "Ownership for socket")
+	flagGroup = flag.Int("group", -1, "Group for socket")
+	flagDB    = flag.String("db", "/var/lib/"+appName+"/db", "Path for DB")
 	// flagMode   = flag.Int("mode", 0640, "FileMode for socket")
 
 	db *bolt.DB
@@ -54,11 +54,16 @@ func main() {
 	err = handler.SetRoutes(
 		&rest.Route{"GET", "/interfaces", GetIfaces},
 		&rest.Route{"GET", "/interfaces/:iface", GetIface},
+
 		&rest.Route{"GET", "/addresses", GetAddresses},
 		&rest.Route{"POST", "/addresses", PostAddress},
 		&rest.Route{"GET", "/addresses/:address", GetAddress},
 		&rest.Route{"PUT", "/addresses/:address", PutAddress},
 		&rest.Route{"DELETE", "/addresses/:address", DeleteAddress},
+
+		&rest.Route{"GET", "/dns", GetDNS},
+		&rest.Route{"POST", "/dns", PostDNS},
+
 		&rest.Route{"GET", "/routes", GetRoutes},
 	)
 	if err != nil {
