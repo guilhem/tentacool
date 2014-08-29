@@ -75,6 +75,7 @@ func main() {
 	if nil != err {
 		log.Fatal(err)
 	}
+	defer ln.Close()
 
 	if *flagOwner != "" && network == "unix" {
 		user, err := user.Lookup(*flagOwner)
@@ -136,7 +137,6 @@ func main() {
 	})
 
 	log.Fatal(http.Serve(ln, &handler))
-	defer ln.Close()
 }
 
 func GetIfaces(w rest.ResponseWriter, req *rest.Request) {
