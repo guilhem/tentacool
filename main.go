@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/json"
 	"flag"
 	"log"
 	"net"
@@ -17,6 +16,10 @@ import (
 	"github.com/boltdb/bolt"
 	"github.com/docker/libcontainer/netlink"
 	"github.com/rakyll/globalconf"
+
+	"github.com/optiflows/tentacool/addresses"
+	"github.com/optiflows/tentacool/dns"
+	"github.com/optiflows/tentacool/gateway"
 )
 
 const (
@@ -47,17 +50,17 @@ func main() {
 		&rest.Route{"GET", "/interfaces", GetIfaces},
 		&rest.Route{"GET", "/interfaces/:iface", GetIface},
 
-		&rest.Route{"GET", "/addresses", GetAddresses},
-		&rest.Route{"POST", "/addresses", PostAddress},
-		&rest.Route{"GET", "/addresses/:address", GetAddress},
-		&rest.Route{"PUT", "/addresses/:address", PutAddress},
-		&rest.Route{"DELETE", "/addresses/:address", DeleteAddress},
+		&rest.Route{"GET", "/addresses", addresses.GetAddresses},
+		&rest.Route{"POST", "/addresses", addresses.PostAddress},
+		&rest.Route{"GET", "/addresses/:address", addresses.GetAddress},
+		&rest.Route{"PUT", "/addresses/:address", addresses.PutAddress},
+		&rest.Route{"DELETE", "/addresses/:address", addresses.DeleteAddress},
 
-		&rest.Route{"GET", "/dns", GetDNS},
-		&rest.Route{"POST", "/dns", PostDNS},
+		&rest.Route{"GET", "/dns", dns.GetDNS},
+		&rest.Route{"POST", "/dns", dns.PostDNS},
 
 		&rest.Route{"GET", "/routes", GetRoutes},
-		&rest.Route{"POST", "/routes/gateway", PostGateway},
+		&rest.Route{"POST", "/routes/gateway", gateway.PostGateway},
 	)
 	if err != nil {
 		log.Fatal(err)
@@ -92,6 +95,16 @@ func main() {
 		}
 	}
 
+	db, err := bolt.Open(*flagDB, 0600, &bolt.Options{Timeout: 1 * time.Second})
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer db.Close()
+
+	if err := addresses.DBinit(db); err != nil {
+		log.Fatal(err)
+	}
+
 	// Handle common process-killing signals so we can gracefully shut down:
 	sigc := make(chan os.Signal, 1)
 	signal.Notify(sigc, os.Interrupt, os.Kill, syscall.SIGTERM)
@@ -104,35 +117,6 @@ func main() {
 		db.Close()
 		os.Exit(0)
 	}(sigc)
-
-	db, err = bolt.Open(*flagDB, 0600, &bolt.Options{Timeout: 1 * time.Second})
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer db.Close()
-	db.Update(func(tx *bolt.Tx) (err error) {
-		_, err = tx.CreateBucketIfNotExists([]byte(addressBucket))
-		if err != nil {
-			log.Fatal(err)
-		}
-		return
-	})
-
-	log.Printf("Reinstall previous address from DB")
-	db.View(func(tx *bolt.Tx) (err error) {
-		b := tx.Bucket([]byte(addressBucket))
-		address := Address{}
-		b.ForEach(func(k, v []byte) (err error) {
-			if err := json.Unmarshal(v, &address); err != nil {
-				log.Printf(err.Error())
-			}
-			if err := SetIP(address); err != nil {
-				log.Printf(err.Error())
-			}
-			return
-		})
-		return
-	})
 
 	log.Fatal(http.Serve(ln, &handler))
 }
@@ -171,24 +155,4 @@ func GetRoutes(w rest.ResponseWriter, req *rest.Request) {
 		return
 	}
 	w.WriteJson(routes)
-}
-
-type Gateway struct {
-	IP   string `json:"ip"`
-	Link string `json:"link"`
-}
-
-func PostGateway(w rest.ResponseWriter, req *rest.Request) {
-	gateway := Gateway{}
-	if err := req.DecodeJsonPayload(&gateway); err != nil {
-		log.Printf(err.Error())
-		rest.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	if err := netlink.AddDefaultGw(gateway.IP, gateway.Link); err != nil {
-		log.Printf(err.Error())
-		rest.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	w.WriteJson(gateway)
 }

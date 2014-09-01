@@ -1,4 +1,4 @@
-package main
+package addresses
 
 import (
 	"encoding/json"
@@ -18,6 +18,10 @@ type Address struct {
 	Link string `json:"link"`
 	IP   string `json:"ip"`
 }
+
+const addressBucket = "address"
+
+var db *bolt.DB
 
 func GetAddresses(w rest.ResponseWriter, req *rest.Request) {
 	addresses := []Address{}
@@ -151,5 +155,33 @@ func SetIP(a Address) (err error) {
 	}
 	log.Printf("Adding route for this address")
 	_ = netlink.AddRoute("", a.IP, "", a.Link)
+	return
+}
+
+func DBinit(d *bolt.DB) (err error) {
+	db = d
+	err = db.Update(func(tx *bolt.Tx) (err error) {
+		_, err = tx.CreateBucketIfNotExists([]byte(addressBucket))
+		return
+	})
+	if err != nil {
+		return err
+	}
+
+	log.Printf("Reinstall previous address from DB")
+	err = db.View(func(tx *bolt.Tx) (err error) {
+		b := tx.Bucket([]byte(addressBucket))
+		address := Address{}
+		b.ForEach(func(k, v []byte) (err error) {
+			if err := json.Unmarshal(v, &address); err != nil {
+				log.Printf(err.Error())
+			}
+			if err := SetIP(address); err != nil {
+				log.Printf(err.Error())
+			}
+			return
+		})
+		return
+	})
 	return
 }
