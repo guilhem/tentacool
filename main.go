@@ -104,6 +104,12 @@ func main() {
 	if err := addresses.DBinit(db); err != nil {
 		log.Fatal(err)
 	}
+	if err := dns.DBinit(db); err != nil {
+		log.Fatal(err)
+	}
+	if err := gateway.DBinit(db); err != nil {
+		log.Fatal(err)
+	}
 
 	// Handle common process-killing signals so we can gracefully shut down:
 	sigc := make(chan os.Signal, 1)
