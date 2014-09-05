@@ -81,8 +81,7 @@ func PostAddress(w rest.ResponseWriter, req *rest.Request) {
 		rest.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	if ip := net.ParseIP(address.IP); ip == nil {
-		err := errors.New("IP is not a valid textual representation of an IP")
+	if _, _, err := net.ParseCIDR(address.IP); err != nil {
 		log.Printf(err.Error())
 		rest.Error(w, err.Error(), http.StatusInternalServerError)
 		return
