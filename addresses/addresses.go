@@ -69,6 +69,18 @@ func PostAddress(w rest.ResponseWriter, req *rest.Request) {
 		rest.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	if address.Link == "" {
+		err := errors.New("Link is empty")
+		log.Printf(err.Error())
+		rest.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if address.IP == "" {
+		err := errors.New("IP is empty")
+		log.Printf(err.Error())
+		rest.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 	err := db.Update(func(tx *bolt.Tx) (err error) {
 		b := tx.Bucket([]byte(addressBucket))
 		if address.ID == "" {
