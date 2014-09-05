@@ -81,6 +81,12 @@ func PostAddress(w rest.ResponseWriter, req *rest.Request) {
 		rest.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	if ip := net.ParseIP(address.IP); ip == nil {
+		err := errors.New("IP is not a valid textual representation of an IP")
+		log.Printf(err.Error())
+		rest.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 	err := db.Update(func(tx *bolt.Tx) (err error) {
 		b := tx.Bucket([]byte(addressBucket))
 		if address.ID == "" {
