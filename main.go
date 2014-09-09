@@ -20,6 +20,7 @@ import (
 	"github.com/optiflows/tentacool/addresses"
 	"github.com/optiflows/tentacool/dns"
 	"github.com/optiflows/tentacool/gateway"
+	"github.com/optiflows/tentacool/interfaces"
 )
 
 const (
@@ -47,8 +48,8 @@ func main() {
 
 	handler := rest.ResourceHandler{}
 	err = handler.SetRoutes(
-		&rest.Route{"GET", "/interfaces", GetIfaces},
-		&rest.Route{"GET", "/interfaces/:iface", GetIface},
+		&rest.Route{"GET", "/interfaces", interfaces.GetIfaces},
+		&rest.Route{"GET", "/interfaces/:iface", interfaces.GetIface},
 
 		&rest.Route{"GET", "/addresses", addresses.GetAddresses},
 		&rest.Route{"POST", "/addresses", addresses.PostAddress},
@@ -125,32 +126,6 @@ func main() {
 	}(sigc)
 
 	log.Fatal(http.Serve(ln, &handler))
-}
-
-func GetIfaces(w rest.ResponseWriter, req *rest.Request) {
-	interfaces, err := net.Interfaces()
-	if err != nil {
-		log.Printf(err.Error())
-		rest.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	w.WriteJson(interfaces)
-}
-
-func GetIface(w rest.ResponseWriter, req *rest.Request) {
-	iface, err := net.InterfaceByName(req.PathParam("iface"))
-	if err != nil {
-		log.Printf(err.Error())
-		rest.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	ip, err := iface.Addrs()
-	if err != nil {
-		log.Printf(err.Error())
-		rest.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	w.WriteJson(ip)
 }
 
 func GetRoutes(w rest.ResponseWriter, req *rest.Request) {
