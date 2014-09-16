@@ -14,6 +14,11 @@ type Interface struct {
     MTU int `json:"mtu"`
 }
 
+type Address struct {
+    IP string `json:"ip"`
+    Mask string `json:"mask"`
+}
+
 func GetIfaces(w rest.ResponseWriter, req *rest.Request) {
     dumb_interfaces, err := net.Interfaces()
     if err != nil {
@@ -37,12 +42,17 @@ func GetIface(w rest.ResponseWriter, req *rest.Request) {
         rest.Error(w, err.Error(), http.StatusInternalServerError)
         return
     }
-    ip, err := iface.Addrs()
-    log.Printf(ip[0].String())
+    dumb_addresses, err := iface.Addrs()
     if err != nil {
         log.Printf(err.Error())
         rest.Error(w, err.Error(), http.StatusInternalServerError)
         return
     }
-    w.WriteJson(ip)
+    addresses := make([]Address, len(dumb_addresses))
+    for index, a := range dumb_addresses {
+        ipnet, _ := a.(*net.IPNet)
+        addresses[index].IP = ipnet.IP.String()
+        addresses[index].Mask = ipnet.Mask.String()
+    }
+    w.WriteJson(addresses)
 }
