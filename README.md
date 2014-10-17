@@ -1,5 +1,6 @@
 # tentacool
-[![Gobuild Download](http://beta.gobuild.io/badge/github.com/optiflows/tentacool/download.png)](http://beta.gobuild.io/github.com/optiflows/tentacool) [![Go Walker](http://gowalker.org/api/v1/badge)](https://gowalker.org/github.com/optiflows/tentacool)
+[![Gobuild Download](https://img.shields.io/badge/gobuild-download-green.svg?style=flat)](http://gobuild.io/github.com/optiflows/tentacool)
+[![Go Walker](https://img.shields.io/badge/GoWalker-Doc-blue.svg?style=flat)](https://gowalker.org/github.com/optiflows/tentacool)
 
 ## Description
 
