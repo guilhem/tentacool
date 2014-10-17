@@ -9,9 +9,8 @@ export GOPATH
 
 
 build:
-	go get -u github.com/gpmgo/gopm
-	${gopm} get
-	${gopm} build || ${gopm} build
+	go get -d -v ./...
+	go build
 
 install: bindir
 	install tentacool $(DESTDIR)/usr/bin/
@@ -20,6 +19,5 @@ bindir:
 	mkdir -p $(bindir)
 
 clean:
-	rm -rf .vendor
 	rm -rf ${GOPATH}
 	rm -rf tentacool
