@@ -30,7 +30,7 @@ const (
 
 var (
 	flagBind  = flag.String("bind", "/var/run/"+appName, "Adress to bind. Format Path or IP:PORT")
-	flagOwner = flag.String("owner", "", "Ownership for socket")
+	flagOwner = flag.String("owner", "tentacool", "Ownership for socket")
 	flagGroup = flag.Int("group", -1, "Group for socket")
 	flagDB    = flag.String("db", "/var/lib/"+appName+"/db", "Path for DB")
 	// flagMode   = flag.Int("mode", 0640, "FileMode for socket")
