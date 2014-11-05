@@ -94,6 +94,9 @@ func main() {
 		if err := os.Chown(*flagBind, uid, gid); err != nil {
 			log.Fatal(err)
 		}
+		if err := os.Chmod(*flagBind, 0660); err != nil {
+			log.Fatal(err)
+		}
 	}
 
 	db, err := bolt.Open(*flagDB, 0600, &bolt.Options{Timeout: 1 * time.Second})
