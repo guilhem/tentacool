@@ -2,12 +2,14 @@ package gateway
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
+	"os/exec"
+	"strings"
 
 	"github.com/ant0ine/go-json-rest/rest"
 	"github.com/boltdb/bolt"
-	"github.com/docker/libcontainer/netlink"
 )
 
 const (
@@ -40,7 +42,7 @@ func PostGateway(w rest.ResponseWriter, req *rest.Request) {
 		return
 	})
 
-	if err := netlink.AddDefaultGw(gateway.IP, gateway.Link); err != nil {
+	if err := addDefaultGw(gateway.IP, gateway.Link); err != nil {
 		log.Printf(err.Error())
 		rest.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -67,11 +69,20 @@ func DBinit(d *bolt.DB) (err error) {
 			if err := json.Unmarshal(v, &gateway); err != nil {
 				log.Printf(err.Error())
 			}
-			if err := netlink.AddDefaultGw(gateway.IP, gateway.Link); err != nil {
+			if err := addDefaultGw(gateway.IP, gateway.Link); err != nil {
 				log.Printf(err.Error())
 			}
 		}
 		return
 	})
 	return
+}
+
+func addDefaultGw(ip string, linkName string) (err error) {
+	err = exec.Command("sh", "-c", fmt.Sprintf("/sbin/route add default gw %s %s", ip, linkName)).Run()
+	if err != nil && !strings.Contains(err.Error(), "exit status 7") {
+		log.Printf(err.Error())
+		return err
+	}
+	return nil
 }
