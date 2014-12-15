@@ -2,12 +2,15 @@ package gateway
 
 import (
 	"encoding/json"
+	"errors"
+	"fmt"
 	"log"
 	"net/http"
+	"os/exec"
+	"strings"
 
 	"github.com/ant0ine/go-json-rest/rest"
 	"github.com/boltdb/bolt"
-	"github.com/docker/libcontainer/netlink"
 )
 
 const (
@@ -36,16 +39,41 @@ func PostGateway(w rest.ResponseWriter, req *rest.Request) {
 		if err != nil {
 			return
 		}
+		log.Printf("Updating key %s with value %s", defaultKey, data)
 		err = b.Put([]byte(defaultKey), []byte(data))
 		return
 	})
 
-	if err := netlink.AddDefaultGw(gateway.IP, gateway.Link); err != nil {
+	if err := addDefaultGw(gateway.IP, gateway.Link); err != nil {
 		log.Printf(err.Error())
 		rest.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 	w.WriteJson(gateway)
+}
+
+func GetGateway(w rest.ResponseWriter, req *rest.Request) {
+	gateway := Gateway{}
+	err := db.View(func(tx *bolt.Tx) (err error) {
+		tmp := tx.Bucket([]byte(routesBucket)).Get([]byte(defaultKey))
+		if tmp == nil {
+			err = errors.New(fmt.Sprintf("ItemNotFound: Could not find gateway"))
+			return
+		}
+		err = json.Unmarshal(tmp, &gateway)
+		return
+	})
+	if err != nil {
+		log.Printf(err.Error())
+		code := http.StatusInternalServerError
+		if strings.Contains(err.Error(), "ItemNotFound") {
+			code = http.StatusNotFound
+		}
+		rest.Error(w, err.Error(), code)
+		return
+	} else {
+		w.WriteJson(gateway)
+	}
 }
 
 func DBinit(d *bolt.DB) (err error) {
@@ -67,11 +95,20 @@ func DBinit(d *bolt.DB) (err error) {
 			if err := json.Unmarshal(v, &gateway); err != nil {
 				log.Printf(err.Error())
 			}
-			if err := netlink.AddDefaultGw(gateway.IP, gateway.Link); err != nil {
+			if err := addDefaultGw(gateway.IP, gateway.Link); err != nil {
 				log.Printf(err.Error())
 			}
 		}
 		return
 	})
 	return
+}
+
+func addDefaultGw(ip string, linkName string) (err error) {
+	err = exec.Command("sh", "-c", fmt.Sprintf("/sbin/route add default gw %s %s", ip, linkName)).Run()
+	if err != nil && !strings.Contains(err.Error(), "exit status 7") {
+		log.Printf(err.Error())
+		return err
+	}
+	return nil
 }

@@ -3,10 +3,12 @@ package addresses
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log"
 	"net"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/ant0ine/go-json-rest/rest"
 	"github.com/boltdb/bolt"
@@ -52,15 +54,24 @@ func GetAddress(w rest.ResponseWriter, req *rest.Request) {
 	address := Address{}
 	err := db.View(func(tx *bolt.Tx) (err error) {
 		tmp := tx.Bucket([]byte(addressBucket)).Get([]byte(id))
+		if tmp == nil {
+			err = errors.New(fmt.Sprintf("ItemNotFound: Could not find address for %s in db", id))
+			return
+		}
 		err = json.Unmarshal(tmp, &address)
 		return
 	})
 	if err != nil {
 		log.Printf(err.Error())
-		rest.Error(w, err.Error(), http.StatusInternalServerError)
+		code := http.StatusInternalServerError
+		if strings.Contains(err.Error(), "ItemNotFound") {
+			code = http.StatusNotFound
+		}
+		rest.Error(w, err.Error(), code)
 		return
+	} else {
+		w.WriteJson(address)
 	}
-	w.WriteJson(address)
 }
 
 func PostAddress(w rest.ResponseWriter, req *rest.Request) {
@@ -130,7 +141,21 @@ func PutAddress(w rest.ResponseWriter, req *rest.Request) {
 		return
 	}
 	address.ID = req.PathParam("address")
-	err := db.Update(func(tx *bolt.Tx) (err error) {
+
+	// Removing the old interface address using netlink
+	oldAddress := Address{}
+	err := db.View(func(tx *bolt.Tx) (err error) {
+		tmp := tx.Bucket([]byte(addressBucket)).Get([]byte(address.ID))
+		if tmp != nil {
+			err = json.Unmarshal(tmp, &oldAddress)
+			if oldAddress != address {
+				err = DeleteIp(oldAddress)
+			}
+		}
+		return
+	})
+
+	err = db.Update(func(tx *bolt.Tx) (err error) {
 		b := tx.Bucket([]byte(addressBucket))
 		data, err := json.Marshal(address)
 		if err != nil {
@@ -139,13 +164,14 @@ func PutAddress(w rest.ResponseWriter, req *rest.Request) {
 		err = b.Put([]byte(address.ID), []byte(data))
 		return
 	})
+
 	if err != nil {
 		log.Printf(err.Error())
 		rest.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	if err := SetIP(address); err != nil {
+	if err = SetIP(address); err != nil {
 		w.Header().Set("X-ERROR", err.Error())
 	}
 	w.WriteJson(address)
@@ -153,7 +179,26 @@ func PutAddress(w rest.ResponseWriter, req *rest.Request) {
 
 func DeleteAddress(w rest.ResponseWriter, req *rest.Request) {
 	id := req.PathParam("address")
-	err := db.Update(func(tx *bolt.Tx) (err error) {
+
+	address := Address{}
+	err := db.View(func(tx *bolt.Tx) (err error) {
+		tmp := tx.Bucket([]byte(addressBucket)).Get([]byte(id))
+		err = json.Unmarshal(tmp, &address)
+		return
+	})
+	if err != nil {
+		log.Printf(err.Error())
+		rest.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if err = DeleteIp(address); err != nil {
+		log.Printf(err.Error())
+		rest.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	err = db.Update(func(tx *bolt.Tx) (err error) {
 		err = tx.Bucket([]byte(addressBucket)).Delete([]byte(id))
 		return
 	})
@@ -173,6 +218,15 @@ func SetIP(a Address) (err error) {
 	}
 	log.Printf("Adding route for this address")
 	_ = netlink.AddRoute("", a.IP, "", a.Link)
+	return
+}
+
+func DeleteIp(a Address) (err error) {
+	log.Printf("Deleting IP: %s, to:%s", a.IP, a.Link)
+	err = network.DeleteInterfaceIp(a.Link, a.IP)
+	if err != nil {
+		return err
+	}
 	return
 }
 
