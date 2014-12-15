@@ -13,7 +13,7 @@ import (
 	"github.com/ant0ine/go-json-rest/rest"
 	"github.com/boltdb/bolt"
 	"github.com/docker/libcontainer/netlink"
-	"github.com/optiflows/libcontainer/network"
+	"github.com/docker/libcontainer/network"
 )
 
 type Address struct {
@@ -141,7 +141,21 @@ func PutAddress(w rest.ResponseWriter, req *rest.Request) {
 		return
 	}
 	address.ID = req.PathParam("address")
-	err := db.Update(func(tx *bolt.Tx) (err error) {
+
+	// Removing the old interface address using netlink
+	oldAddress := Address{}
+	err := db.View(func(tx *bolt.Tx) (err error) {
+		tmp := tx.Bucket([]byte(addressBucket)).Get([]byte(address.ID))
+		if tmp != nil {
+			err = json.Unmarshal(tmp, &oldAddress)
+			if oldAddress != address {
+				err = DeleteIp(oldAddress)
+			}
+		}
+		return
+	})
+
+	err = db.Update(func(tx *bolt.Tx) (err error) {
 		b := tx.Bucket([]byte(addressBucket))
 		data, err := json.Marshal(address)
 		if err != nil {
@@ -150,13 +164,14 @@ func PutAddress(w rest.ResponseWriter, req *rest.Request) {
 		err = b.Put([]byte(address.ID), []byte(data))
 		return
 	})
+
 	if err != nil {
 		log.Printf(err.Error())
 		rest.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	if err := SetIP(address); err != nil {
+	if err = SetIP(address); err != nil {
 		w.Header().Set("X-ERROR", err.Error())
 	}
 	w.WriteJson(address)

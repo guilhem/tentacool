@@ -62,6 +62,7 @@ func main() {
 
 		&rest.Route{"GET", "/routes", GetRoutes},
 		&rest.Route{"POST", "/routes/gateway", gateway.PostGateway},
+		&rest.Route{"GET", "/routes/gateway", gateway.GetGateway},
 	)
 	if err != nil {
 		log.Fatal(err)
