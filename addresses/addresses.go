@@ -231,7 +231,7 @@ func DeleteIp(a Address) (err error) {
 	return
 }
 
-func CommandSetIP(ip string) {
+func CommandSetIP(id string, ip string) {
 	if _, _, err := net.ParseCIDR(ip); err != nil {
 		log.Printf(err.Error())
 		return
@@ -245,7 +245,7 @@ func CommandSetIP(ip string) {
 		return
 	}
 
-	address := Address{ID: "CLI", Link: "eth0", IP: ip}
+	address := Address{ID: id, Link: "eth0", IP: ip}
 
 	oldAddress := Address{}
 	if err := db.View(func(tx *bolt.Tx) (err error) {

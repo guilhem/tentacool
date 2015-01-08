@@ -9,6 +9,7 @@ import (
 	"os/signal"
 	"os/user"
 	"strconv"
+	"strings"
 	"syscall"
 	"time"
 
@@ -29,7 +30,7 @@ const (
 )
 
 var (
-	flagSetIP = flag.String("setip", "", "CLI to set an IP without launching the Tentacool server")
+	flagSetIP = flag.String("setip", "", "CLI to set an IP without launching the Tentacool server ('ID:CIDR')")
 	flagBind  = flag.String("bind", "/var/run/"+appName, "Adress to bind. Format Path or IP:PORT")
 	flagOwner = flag.String("owner", "tentacool", "Ownership for socket")
 	flagGroup = flag.Int("group", -1, "Group for socket")
@@ -57,7 +58,12 @@ func main() {
 		if err := addresses.DBinit(db); err != nil {
 			log.Fatal(err)
 		}
-		addresses.CommandSetIP(*flagSetIP)
+		splited := strings.Split(*flagSetIP, ":")
+		if len(splited) < 2 {
+			log.Fatal("ID:CIDR required")
+		}
+		id, ip := splited[0], splited[1]
+		addresses.CommandSetIP(id, ip)
 		os.Exit(0)
 	}
 
