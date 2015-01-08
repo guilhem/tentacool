@@ -121,6 +121,7 @@ func PostAddress(w rest.ResponseWriter, req *rest.Request) {
 		err = b.Put([]byte(address.ID), []byte(data))
 		return
 	})
+
 	if err != nil {
 		log.Printf(err.Error())
 		rest.Error(w, err.Error(), http.StatusInternalServerError)
@@ -228,6 +229,53 @@ func DeleteIp(a Address) (err error) {
 		return err
 	}
 	return
+}
+
+func CommandSetIP(ip string) {
+	if _, _, err := net.ParseCIDR(ip); err != nil {
+		log.Printf(err.Error())
+		return
+	}
+
+	if err := db.Update(func(tx *bolt.Tx) (err error) {
+		_, err = tx.CreateBucketIfNotExists([]byte(addressBucket))
+		return
+	}); err != nil {
+		log.Printf(err.Error())
+		return
+	}
+
+	address := Address{ID: "CLI", Link: "eth0", IP: ip}
+
+	oldAddress := Address{}
+	if err := db.View(func(tx *bolt.Tx) (err error) {
+		tmp := tx.Bucket([]byte(addressBucket)).Get([]byte(address.ID))
+		if tmp != nil {
+			err = json.Unmarshal(tmp, &oldAddress)
+			if oldAddress != address {
+				err = DeleteIp(oldAddress)
+			}
+		}
+		return
+	}); err != nil {
+		log.Printf(err.Error())
+		return
+	}
+
+	if err := db.Update(func(tx *bolt.Tx) (err error) {
+		b := tx.Bucket([]byte(addressBucket))
+		data, err := json.Marshal(address)
+		if err != nil {
+			return
+		}
+		err = b.Put([]byte(address.ID), []byte(data))
+		return
+	}); err != nil {
+		log.Printf(err.Error())
+		return
+	}
+
+	SetIP(address)
 }
 
 func DBinit(d *bolt.DB) (err error) {
