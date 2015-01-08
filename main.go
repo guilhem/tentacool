@@ -29,6 +29,7 @@ const (
 )
 
 var (
+	flagSetIP = flag.String("setip", "", "CLI to set an IP without launching the Tentacool server")
 	flagBind  = flag.String("bind", "/var/run/"+appName, "Adress to bind. Format Path or IP:PORT")
 	flagOwner = flag.String("owner", "tentacool", "Ownership for socket")
 	flagGroup = flag.Int("group", -1, "Group for socket")
@@ -45,6 +46,20 @@ func main() {
 		log.Fatal(err)
 	}
 	conf.ParseAll()
+
+	db, err := bolt.Open(*flagDB, 0600, &bolt.Options{Timeout: 1 * time.Second})
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer db.Close()
+
+	if *flagSetIP != "" {
+		if err := addresses.DBinit(db); err != nil {
+			log.Fatal(err)
+		}
+		addresses.CommandSetIP(*flagSetIP)
+		os.Exit(0)
+	}
 
 	handler := rest.ResourceHandler{}
 	err = handler.SetRoutes(
@@ -99,12 +114,6 @@ func main() {
 			log.Fatal(err)
 		}
 	}
-
-	db, err := bolt.Open(*flagDB, 0600, &bolt.Options{Timeout: 1 * time.Second})
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer db.Close()
 
 	if err := addresses.DBinit(db); err != nil {
 		log.Fatal(err)
