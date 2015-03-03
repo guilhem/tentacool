@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"log"
+	"log/syslog"
 	"net"
 	"net/http"
 	"os"
@@ -30,11 +31,12 @@ const (
 )
 
 var (
-	flagSetIP = flag.String("setip", "", "CLI to set an IP without launching the Tentacool server ('ID:CIDR')")
-	flagBind  = flag.String("bind", "/var/run/"+appName, "Adress to bind. Format Path or IP:PORT")
-	flagOwner = flag.String("owner", "tentacool", "Ownership for socket")
-	flagGroup = flag.Int("group", -1, "Group for socket")
-	flagDB    = flag.String("db", "/var/lib/"+appName+"/db", "Path for DB")
+	flagSetIP   = flag.String("setip", "", "CLI to set an IP without launching the Tentacool server ('ID:CIDR')")
+	flagBind    = flag.String("bind", "/var/run/"+appName, "Adress to bind. Format Path or IP:PORT")
+	flagOwner   = flag.String("owner", "tentacool", "Ownership for socket")
+	flagGroup   = flag.Int("group", -1, "Group for socket")
+	flagDB      = flag.String("db", "/var/lib/"+appName+"/db", "Path for DB")
+	flagConsole = flag.Bool("console", false, "Log in console for debug purposes")
 	// flagMode   = flag.Int("mode", 0640, "FileMode for socket")
 
 	db *bolt.DB
@@ -42,11 +44,19 @@ var (
 )
 
 func main() {
+
 	conf, err := globalconf.New(appName)
 	if err != nil {
 		log.Fatal(err)
 	}
 	conf.ParseAll()
+
+	if *flagConsole == false {
+		logwriter, err := syslog.New(syslog.LOG_NOTICE, appName)
+		if err == nil {
+			log.SetOutput(logwriter)
+		}
+	}
 
 	db, err := bolt.Open(*flagDB, 0600, &bolt.Options{Timeout: 1 * time.Second})
 	if err != nil {
