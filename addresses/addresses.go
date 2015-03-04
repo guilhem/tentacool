@@ -222,23 +222,9 @@ func SetIP(a Address) (err error) {
 	return
 }
 
-// Replacement, this was previously merged in libcontainer/network
-// See https://github.com/docker/libcontainer/commit/c3ab8d0cb4b439b7691edf7b63fcecd169834250
-func DeleteInterfaceIp(name string, rawIp string) error {
-	iface, err := net.InterfaceByName(name)
-	if err != nil {
-		return err
-	}
-	ip, ipNet, err := net.ParseCIDR(rawIp)
-	if err != nil {
-		return err
-	}
-	return netlink.NetworkLinkDelIp(iface, ip, ipNet)
-}
-
 func DeleteIp(a Address) (err error) {
 	log.Printf("Deleting IP: %s, to:%s", a.IP, a.Link)
-	err = DeleteInterfaceIp(a.Link, a.IP)
+	err = network.DeleteInterfaceIp(a.Link, a.IP)
 	if err != nil {
 		return err
 	}
