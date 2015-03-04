@@ -72,6 +72,7 @@ func GetGateway(w rest.ResponseWriter, req *rest.Request) {
 		rest.Error(w, err.Error(), code)
 		return
 	} else {
+		log.Printf("Requested Gateways list : %s", gateway)
 		w.WriteJson(gateway)
 	}
 }

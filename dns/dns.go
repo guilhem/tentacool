@@ -6,8 +6,8 @@ import (
 	"net/http"
 
 	"github.com/ant0ine/go-json-rest/rest"
-	"github.com/guilhem/dnsconfig"
 	"github.com/boltdb/bolt"
+	"github.com/guilhem/dnsconfig"
 	"github.com/guilhem/dnsconfig/resolvconf"
 )
 
@@ -25,6 +25,7 @@ func GetDNS(w rest.ResponseWriter, req *rest.Request) {
 		rest.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	log.Printf("Request DNS list : %s", dns)
 	w.WriteJson(dns)
 }
 

@@ -77,8 +77,9 @@ func main() {
 		os.Exit(0)
 	}
 
-	handler := rest.ResourceHandler{}
-	err = handler.SetRoutes(
+	api := rest.NewApi()
+
+	router, err := rest.MakeRouter(
 		&rest.Route{"GET", "/interfaces", interfaces.GetIfaces},
 		&rest.Route{"GET", "/interfaces/:iface", interfaces.GetIface},
 
@@ -98,6 +99,8 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	api.SetApp(router)
 
 	var network string
 	if _, err = net.ResolveTCPAddr("tcp", *flagBind); err == nil {
@@ -154,7 +157,8 @@ func main() {
 		os.Exit(0)
 	}(sigc)
 
-	log.Fatal(http.Serve(ln, &handler))
+	log.Printf("Now listening to bind %s", *flagBind)
+	log.Fatal(http.Serve(ln, api.MakeHandler()))
 }
 
 func GetRoutes(w rest.ResponseWriter, req *rest.Request) {
