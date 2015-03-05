@@ -46,6 +46,7 @@ func GetAddresses(w rest.ResponseWriter, req *rest.Request) {
 		rest.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	log.Printf("GetAddresses requested : %s", addresses)
 	w.WriteJson(addresses)
 }
 
@@ -70,6 +71,7 @@ func GetAddress(w rest.ResponseWriter, req *rest.Request) {
 		rest.Error(w, err.Error(), code)
 		return
 	} else {
+		log.Printf("GetAddress %s requested : %s", id, address)
 		w.WriteJson(address)
 	}
 }

@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"log"
+	"log/syslog"
 	"net"
 	"net/http"
 	"os"
@@ -30,11 +31,12 @@ const (
 )
 
 var (
-	flagSetIP = flag.String("setip", "", "CLI to set an IP without launching the Tentacool server ('ID:CIDR')")
-	flagBind  = flag.String("bind", "/var/run/"+appName, "Adress to bind. Format Path or IP:PORT")
-	flagOwner = flag.String("owner", "tentacool", "Ownership for socket")
-	flagGroup = flag.Int("group", -1, "Group for socket")
-	flagDB    = flag.String("db", "/var/lib/"+appName+"/db", "Path for DB")
+	flagSetIP  = flag.String("setip", "", "CLI to set an IP without launching the Tentacool server ('ID:CIDR')")
+	flagBind   = flag.String("bind", "/var/run/"+appName, "Adress to bind. Format Path or IP:PORT")
+	flagOwner  = flag.String("owner", "tentacool", "Ownership for socket")
+	flagGroup  = flag.Int("group", -1, "Group for socket")
+	flagDB     = flag.String("db", "/var/lib/"+appName+"/db", "Path for DB")
+	flagStdout = flag.Bool("stdout", false, "Log in stdout for debug purposes")
 	// flagMode   = flag.Int("mode", 0640, "FileMode for socket")
 
 	db *bolt.DB
@@ -42,11 +44,19 @@ var (
 )
 
 func main() {
+
 	conf, err := globalconf.New(appName)
 	if err != nil {
 		log.Fatal(err)
 	}
 	conf.ParseAll()
+
+	if *flagStdout == false {
+		logwriter, err := syslog.New(syslog.LOG_NOTICE, appName)
+		if err == nil {
+			log.SetOutput(logwriter)
+		}
+	}
 
 	db, err := bolt.Open(*flagDB, 0600, &bolt.Options{Timeout: 1 * time.Second})
 	if err != nil {
@@ -67,8 +77,9 @@ func main() {
 		os.Exit(0)
 	}
 
-	handler := rest.ResourceHandler{}
-	err = handler.SetRoutes(
+	api := rest.NewApi()
+
+	router, err := rest.MakeRouter(
 		&rest.Route{"GET", "/interfaces", interfaces.GetIfaces},
 		&rest.Route{"GET", "/interfaces/:iface", interfaces.GetIface},
 
@@ -88,6 +99,8 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	api.SetApp(router)
 
 	var network string
 	if _, err = net.ResolveTCPAddr("tcp", *flagBind); err == nil {
@@ -144,7 +157,8 @@ func main() {
 		os.Exit(0)
 	}(sigc)
 
-	log.Fatal(http.Serve(ln, &handler))
+	log.Printf("Now listening to bind %s", *flagBind)
+	log.Fatal(http.Serve(ln, api.MakeHandler()))
 }
 
 func GetRoutes(w rest.ResponseWriter, req *rest.Request) {

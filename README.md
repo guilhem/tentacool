@@ -13,6 +13,22 @@ All done with a auditable, fast and bulletproof software.
 
 So many software do frontend, backend and system... And finally run in `root` by easiness.
 
+## To build
+
+Be sure to set the correct GOPATH and GOROOT environment variables.
+You can make use of [godeb](https://github.com/niemeyer/godeb) which set you up with the version of Go you want. (Tentacool is using >= 1.2)
+
+Build Tentacool with [gom](https://github.com/mattn/gom) or [gopm](https://github.com/gpmgo/gopm) with the given `Gomfile` and `.gopmfile`.
+
+### Example with `gom`
+
+```
+go get github.com/mattn/gom
+gom install
+gom build
+./tentacool -help
+```
+
 ## API
 
 ### addresses
@@ -45,7 +61,7 @@ Add a new address to manage.
 
 ##### parameters
 
-* [address](#address)  
+* [address](#address)
 `id` optional
 
 ##### Response
@@ -96,7 +112,7 @@ Modify an existing address
 
 ##### parameters
 
-* [address](#address)  
+* [address](#address)
 `id` ignored
 
 ##### Response
