@@ -31,12 +31,12 @@ const (
 )
 
 var (
-	flagSetIP   = flag.String("setip", "", "CLI to set an IP without launching the Tentacool server ('ID:CIDR')")
-	flagBind    = flag.String("bind", "/var/run/"+appName, "Adress to bind. Format Path or IP:PORT")
-	flagOwner   = flag.String("owner", "tentacool", "Ownership for socket")
-	flagGroup   = flag.Int("group", -1, "Group for socket")
-	flagDB      = flag.String("db", "/var/lib/"+appName+"/db", "Path for DB")
-	flagConsole = flag.Bool("console", false, "Log in console for debug purposes")
+	flagSetIP  = flag.String("setip", "", "CLI to set an IP without launching the Tentacool server ('ID:CIDR')")
+	flagBind   = flag.String("bind", "/var/run/"+appName, "Adress to bind. Format Path or IP:PORT")
+	flagOwner  = flag.String("owner", "tentacool", "Ownership for socket")
+	flagGroup  = flag.Int("group", -1, "Group for socket")
+	flagDB     = flag.String("db", "/var/lib/"+appName+"/db", "Path for DB")
+	flagStdout = flag.Bool("stdout", false, "Log in stdout for debug purposes")
 	// flagMode   = flag.Int("mode", 0640, "FileMode for socket")
 
 	db *bolt.DB
@@ -51,7 +51,7 @@ func main() {
 	}
 	conf.ParseAll()
 
-	if *flagConsole == false {
+	if *flagStdout == false {
 		logwriter, err := syslog.New(syslog.LOG_NOTICE, appName)
 		if err == nil {
 			log.SetOutput(logwriter)
