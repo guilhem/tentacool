@@ -88,7 +88,8 @@ func main() {
 		&rest.Route{"GET", "/addresses/:address", addresses.GetAddress},
 		&rest.Route{"PUT", "/addresses/:address", addresses.PutAddress},
 		&rest.Route{"DELETE", "/addresses/:address", addresses.DeleteAddress},
-		&rest.Route{"POST", "/addresses/dhcp", addresses.PostDhcp},
+
+		&rest.Route{"POST", "/dhcp", addresses.PostDhcp},
 
 		&rest.Route{"GET", "/dns", dns.GetDNS},
 		&rest.Route{"POST", "/dns", dns.PostDNS},
