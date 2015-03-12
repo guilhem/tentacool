@@ -23,6 +23,10 @@ type Address struct {
 	IP   string `json:"ip"`
 }
 
+type DHCP struct {
+	Active bool `json:"active"`
+}
+
 const (
 	defaultIface = "eth0"
 	addressBucket = "address"
@@ -219,11 +223,19 @@ func DeleteAddress(w rest.ResponseWriter, req *rest.Request) {
 }
 
 func PostDhcp(w rest.ResponseWriter, req *rest.Request) {
-	active := req.PathParam("active")
+	// Get parameters
+	dhcp := DHCP{}
+	if err := req.DecodeJsonPayload(&dhcp); err != nil {
+		log.Printf(err.Error())
+		rest.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 
-	err = db.View(func(tx *bolt.Tx) (err error) {
+	// Update DB
+	err := db.Update(func(tx *bolt.Tx) (err error) {
 		b := tx.Bucket([]byte(addressBucket))
-		err = b.Put([]byte(dhcpKey), []byte(active))
+		v := strconv.FormatBool(dhcp.Active)
+		err = b.Put([]byte(dhcpKey), []byte(v))
 		return
 	})
 	if err != nil {
@@ -232,7 +244,8 @@ func PostDhcp(w rest.ResponseWriter, req *rest.Request) {
 		return
 	}
 
-	if err = SetDhcp(active, defaultIface); err != nil {
+	// Activate/deactivate
+	if err = SetDhcp(dhcp.Active, defaultIface); err != nil {
 		log.Printf(err.Error())
 		rest.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -336,10 +349,10 @@ func DBinit(d *bolt.DB) (err error) {
 	err = db.View(func(tx *bolt.Tx) (err error) {
 		b := tx.Bucket([]byte(addressBucket))
 
-		dhcp := b.Get([]byte(dhcpKey))
+		dhcp, _ := strconv.ParseBool(string(b.Get([]byte(dhcpKey))))
 		if dhcp {
 			log.Printf("Restore DHCP client")
-			if err = SetDhcp(true, defaultIface; err != nil {
+			if err = SetDhcp(true, defaultIface); err != nil {
 				log.Printf(err.Error())
 			}
 		}
