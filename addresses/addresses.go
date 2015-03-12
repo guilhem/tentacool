@@ -324,10 +324,10 @@ func CommandSetIP(id string, ip string) {
 func SetDhcp(active bool, iface string) (err error) {
 	if active {
 		log.Printf("Starting DHCP client")
-		err = exec.Command("sh", "-c", "/sbin/dhclient", iface).Run()
+		err = exec.Command("sh", "-c", fmt.Sprintf("/sbin/dhclient %s", iface)).Run()
 	} else {
 		log.Printf("Stoping DHCP client")
-		err = exec.Command("sh", "-c", "/sbin/dhclient", "-r").Run()
+		err = exec.Command("sh", "-c", "/sbin/dhclient -x").Run()
 	}
 	if err != nil {
 		log.Printf(err.Error())
