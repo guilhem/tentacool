@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"os/exec"
 
 	"github.com/ant0ine/go-json-rest/rest"
 	"github.com/boltdb/bolt"
@@ -22,7 +23,11 @@ type Address struct {
 	IP   string `json:"ip"`
 }
 
-const addressBucket = "address"
+const (
+	defaultIface = "eth0"
+	addressBucket = "address"
+	dhcpKey = "dhcp"
+)
 
 var db *bolt.DB
 
@@ -213,6 +218,29 @@ func DeleteAddress(w rest.ResponseWriter, req *rest.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
+func PostDhcp(w rest.ResponseWriter, req *rest.Request) {
+	active := req.PathParam("active")
+
+	err = db.View(func(tx *bolt.Tx) (err error) {
+		b := tx.Bucket([]byte(addressBucket))
+		err = b.Put([]byte(dhcpKey), []byte(active))
+		return
+	})
+	if err != nil {
+		log.Printf(err.Error())
+		rest.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if err = SetDhcp(active, defaultIface); err != nil {
+		log.Printf(err.Error())
+		rest.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+}
+
 func SetIP(a Address) (err error) {
 	log.Printf("Set IP:%s, to:%s", a.IP, a.Link)
 	err = network.SetInterfaceIp(a.Link, a.IP)
@@ -280,6 +308,21 @@ func CommandSetIP(id string, ip string) {
 	SetIP(address)
 }
 
+func SetDhcp(active bool, iface string) (err error) {
+	if active {
+		log.Printf("Starting DHCP client")
+		err = exec.Command("sh", "-c", "/sbin/dhclient", iface).Run()
+	} else {
+		log.Printf("Stoping DHCP client")
+		err = exec.Command("sh", "-c", "/sbin/dhclient", "-r").Run()
+	}
+	if err != nil {
+		log.Printf(err.Error())
+		return err
+	}
+	return nil
+}
+
 func DBinit(d *bolt.DB) (err error) {
 	db = d
 	err = db.Update(func(tx *bolt.Tx) (err error) {
@@ -290,9 +333,18 @@ func DBinit(d *bolt.DB) (err error) {
 		return err
 	}
 
-	log.Printf("Reinstall previous address from DB")
 	err = db.View(func(tx *bolt.Tx) (err error) {
 		b := tx.Bucket([]byte(addressBucket))
+
+		dhcp := b.Get([]byte(dhcpKey))
+		if dhcp {
+			log.Printf("Restore DHCP client")
+			if err = SetDhcp(true, defaultIface; err != nil {
+				log.Printf(err.Error())
+			}
+		}
+
+		log.Printf("Reinstall previous address from DB")
 		address := Address{}
 		b.ForEach(func(k, v []byte) (err error) {
 			if err := json.Unmarshal(v, &address); err != nil {
