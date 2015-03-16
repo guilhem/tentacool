@@ -222,10 +222,32 @@ func DeleteAddress(w rest.ResponseWriter, req *rest.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
+func GetDhcp(w rest.ResponseWriter, req *rest.Request) {
+	err := db.View(func(tx *bolt.Tx) (err error) {
+		b := tx.Bucket([]byte(addressBucket))
+		dhcp, _ := strconv.ParseBool(string(b.Get([]byte(dhcpKey))))
+
+		w.WriteJson(map[string]bool{"active": dhcp})
+		return
+	})
+	if err != nil {
+		log.Printf(err.Error())
+		rest.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+}
+
 func PostDhcp(w rest.ResponseWriter, req *rest.Request) {
 	// Get parameters
 	dhcp := DHCP{}
 	if err := req.DecodeJsonPayload(&dhcp); err != nil {
+		log.Printf(err.Error())
+		rest.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Activate/deactivate dhcp client
+	if err := SetDhcp(dhcp.Active, defaultIface); err != nil {
 		log.Printf(err.Error())
 		rest.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -244,14 +266,8 @@ func PostDhcp(w rest.ResponseWriter, req *rest.Request) {
 		return
 	}
 
-	// Activate/deactivate
-	if err = SetDhcp(dhcp.Active, defaultIface); err != nil {
-		log.Printf(err.Error())
-		rest.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
 	w.WriteHeader(http.StatusOK)
+	w.WriteJson(map[string]bool{"active": dhcp.Active})
 }
 
 func SetIP(a Address) (err error) {
@@ -351,7 +367,6 @@ func DBinit(d *bolt.DB) (err error) {
 
 		dhcp, _ := strconv.ParseBool(string(b.Get([]byte(dhcpKey))))
 		if dhcp {
-			log.Printf("Restore DHCP client")
 			if err = SetDhcp(true, defaultIface); err != nil {
 				log.Printf(err.Error())
 			}
