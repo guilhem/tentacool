@@ -24,7 +24,8 @@ type Address struct {
 }
 
 type DHCP struct {
-	Active bool `json:"active"`
+	Active    bool   `json:"active"`
+	Interface string `json:"interface"`
 }
 
 const (
@@ -223,31 +224,42 @@ func DeleteAddress(w rest.ResponseWriter, req *rest.Request) {
 }
 
 func GetDhcp(w rest.ResponseWriter, req *rest.Request) {
+	dhcp := DHCP{}
 	err := db.View(func(tx *bolt.Tx) (err error) {
-		b := tx.Bucket([]byte(addressBucket))
-		dhcp, _ := strconv.ParseBool(string(b.Get([]byte(dhcpKey))))
-
-		w.WriteJson(map[string]bool{"active": dhcp})
+		tmp := tx.Bucket([]byte(addressBucket)).Get([]byte(dhcpKey))
+		if tmp != nil {
+			err = json.Unmarshal(tmp, &dhcp)
+			return
+		}
+		dhcp.Active = false
+		dhcp.Interface = defaultIface
 		return
 	})
 	if err != nil {
 		log.Printf(err.Error())
 		rest.Error(w, err.Error(), http.StatusInternalServerError)
 		return
+	} else {
+		log.Printf("GetDhcp requested: %s", dhcp)
+		w.WriteJson(dhcp)
 	}
 }
 
 func PostDhcp(w rest.ResponseWriter, req *rest.Request) {
-	// Get parameters
+	// Parameters
 	dhcp := DHCP{}
 	if err := req.DecodeJsonPayload(&dhcp); err != nil {
 		log.Printf(err.Error())
 		rest.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	if dhcp.Interface == "" {
+		dhcp.Interface = defaultIface
+		return
+	}
 
 	// Activate/deactivate dhcp client
-	if err := SetDhcp(dhcp.Active, defaultIface); err != nil {
+	if err := SetDhcp(dhcp.Active, dhcp.Interface); err != nil {
 		log.Printf(err.Error())
 		rest.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -256,8 +268,11 @@ func PostDhcp(w rest.ResponseWriter, req *rest.Request) {
 	// Update DB
 	err := db.Update(func(tx *bolt.Tx) (err error) {
 		b := tx.Bucket([]byte(addressBucket))
-		v := strconv.FormatBool(dhcp.Active)
-		err = b.Put([]byte(dhcpKey), []byte(v))
+		data, err := json.Marshal(dhcp)
+		if err != nil {
+			return
+		}
+		err = b.Put([]byte(dhcpKey), []byte(data))
 		return
 	})
 	if err != nil {
@@ -267,7 +282,7 @@ func PostDhcp(w rest.ResponseWriter, req *rest.Request) {
 	}
 
 	w.WriteHeader(http.StatusOK)
-	w.WriteJson(map[string]bool{"active": dhcp.Active})
+	w.WriteJson(dhcp)
 }
 
 func SetIP(a Address) (err error) {
@@ -340,7 +355,7 @@ func CommandSetIP(id string, ip string) {
 func SetDhcp(active bool, iface string) (err error) {
 	if active {
 		log.Printf("Starting DHCP client")
-		err = exec.Command("sh", "-c", fmt.Sprintf("/sbin/dhclient %s", iface)).Run()
+		err = exec.Command("sh", "-c", fmt.Sprintf("/sbin/dhclient %s &", iface)).Run()
 	} else {
 		log.Printf("Stoping DHCP client")
 		err = exec.Command("sh", "-c", "/sbin/dhclient -x").Run()
@@ -365,9 +380,14 @@ func DBinit(d *bolt.DB) (err error) {
 	err = db.View(func(tx *bolt.Tx) (err error) {
 		b := tx.Bucket([]byte(addressBucket))
 
-		dhcp, _ := strconv.ParseBool(string(b.Get([]byte(dhcpKey))))
-		if dhcp {
-			if err = SetDhcp(true, defaultIface); err != nil {
+		log.Printf("Restore DHCP from DB")
+		dhcp := DHCP{}
+		tmp := b.Get([]byte(dhcpKey))
+		if tmp != nil {
+			if err := json.Unmarshal(tmp, &dhcp); err != nil {
+				log.Printf(err.Error())
+			} else
+			if err := SetDhcp(dhcp.Active, dhcp.Interface); err != nil {
 				log.Printf(err.Error())
 			}
 		}
@@ -377,7 +397,7 @@ func DBinit(d *bolt.DB) (err error) {
 		b.ForEach(func(k, v []byte) (err error) {
 			if err := json.Unmarshal(v, &address); err != nil {
 				log.Printf(err.Error())
-			}
+			} else
 			if err := SetIP(address); err != nil {
 				log.Printf(err.Error())
 			}
