@@ -250,7 +250,7 @@ func PostDhcp(w rest.ResponseWriter, req *rest.Request) {
 	dhcp := DHCP{}
 	if err := req.DecodeJsonPayload(&dhcp); err != nil {
 		log.Printf(err.Error())
-		rest.Error(w, err.Error(), http.StatusInternalServerError)
+		rest.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 	if dhcp.Interface == "" {
@@ -357,7 +357,7 @@ func SetDhcp(active bool, iface string) (err error) {
 		log.Printf("Starting DHCP client")
 		err = exec.Command("sh", "-c", fmt.Sprintf("/sbin/dhclient %s &", iface)).Run()
 	} else {
-		log.Printf("Stoping DHCP client")
+		log.Printf("Stopping DHCP client")
 		err = exec.Command("sh", "-c", "/sbin/dhclient -x").Run()
 	}
 	if err != nil {
