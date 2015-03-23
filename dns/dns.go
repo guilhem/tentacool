@@ -18,6 +18,7 @@ const (
 
 var db *bolt.DB
 
+// GetDNS returns all registered DNS
 func GetDNS(w rest.ResponseWriter, req *rest.Request) {
 	dns, err := dnsconfig.DnsReadConfig(useResolvPath())
 	if err != nil {
@@ -29,6 +30,7 @@ func GetDNS(w rest.ResponseWriter, req *rest.Request) {
 	w.WriteJson(dns)
 }
 
+// PostDNS register the specified list of DNS
 func PostDNS(w rest.ResponseWriter, req *rest.Request) {
 	dns := dnsconfig.DnsConfig{}
 	if err := req.DecodeJsonPayload(&dns); err != nil {
@@ -57,11 +59,11 @@ func useResolvPath() string {
 	if resolvconf.IsResolvconf() {
 		log.Printf("use Resolvconf")
 		return resolvconf.ResolvPath
-	} else {
-		return dnsconfig.ResolvPath
 	}
+	return dnsconfig.ResolvPath
 }
 
+// DBinit initializes the DNS database at startup
 func DBinit(d *bolt.DB) (err error) {
 	db = d
 	err = db.Update(func(tx *bolt.Tx) (err error) {

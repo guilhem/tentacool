@@ -11,22 +11,22 @@ import (
 	"github.com/boltdb/bolt"
 )
 
-type DHCP struct {
+type dhcpStruct struct {
 	Active    bool   `json:"active"`
 	Interface string `json:"interface"`
 }
 
 const (
 	defaultIface = "eth0"
-    dhcpBucket = "dhcp"
-    activeKey = "active"
+	dhcpBucket   = "dhcp"
+	activeKey    = "active"
 )
 
 var db *bolt.DB
 
-
+// GetDhcp returns the current status of the DHCP client
 func GetDhcp(w rest.ResponseWriter, req *rest.Request) {
-	dhcp := DHCP{}
+	dhcp := dhcpStruct{}
 	err := db.View(func(tx *bolt.Tx) (err error) {
 		tmp := tx.Bucket([]byte(dhcpBucket)).Get([]byte(activeKey))
 		if tmp != nil {
@@ -41,15 +41,15 @@ func GetDhcp(w rest.ResponseWriter, req *rest.Request) {
 		log.Printf(err.Error())
 		rest.Error(w, err.Error(), http.StatusInternalServerError)
 		return
-	} else {
-		log.Printf("GetDhcp requested: %s", dhcp)
-		w.WriteJson(dhcp)
 	}
+	log.Printf("GetDhcp requested: %s", dhcp)
+	w.WriteJson(dhcp)
 }
 
+// PostDhcp changes set or unset the DHCP client (using system)
 func PostDhcp(w rest.ResponseWriter, req *rest.Request) {
 	// Parameters
-	dhcp := DHCP{}
+	dhcp := dhcpStruct{}
 	if err := req.DecodeJsonPayload(&dhcp); err != nil {
 		log.Printf(err.Error())
 		rest.Error(w, err.Error(), http.StatusBadRequest)
@@ -61,7 +61,7 @@ func PostDhcp(w rest.ResponseWriter, req *rest.Request) {
 	}
 
 	// Activate/deactivate dhcp client
-	if err := SetDhcp(dhcp.Active, dhcp.Interface); err != nil {
+	if err := setDhcp(dhcp.Active, dhcp.Interface); err != nil {
 		log.Printf(err.Error())
 		rest.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -87,7 +87,7 @@ func PostDhcp(w rest.ResponseWriter, req *rest.Request) {
 	w.WriteJson(dhcp)
 }
 
-func SetDhcp(active bool, iface string) (err error) {
+func setDhcp(active bool, iface string) (err error) {
 	if active {
 		log.Printf("Starting DHCP client")
 		err = exec.Command("sh", "-c", fmt.Sprintf("/sbin/dhclient %s &", iface)).Run()
@@ -102,6 +102,7 @@ func SetDhcp(active bool, iface string) (err error) {
 	return nil
 }
 
+// DBinit initializes the DHCP database at startup
 func DBinit(d *bolt.DB) (err error) {
 	db = d
 	err = db.Update(func(tx *bolt.Tx) (err error) {
@@ -116,13 +117,12 @@ func DBinit(d *bolt.DB) (err error) {
 		b := tx.Bucket([]byte(dhcpBucket))
 
 		log.Printf("Restore DHCP from DB")
-		dhcp := DHCP{}
+		dhcp := dhcpStruct{}
 		tmp := b.Get([]byte(activeKey))
 		if tmp != nil {
 			if err := json.Unmarshal(tmp, &dhcp); err != nil {
 				log.Printf(err.Error())
-			} else
-			if err := SetDhcp(dhcp.Active, dhcp.Interface); err != nil {
+			} else if err := setDhcp(dhcp.Active, dhcp.Interface); err != nil {
 				log.Printf(err.Error())
 			}
 		}
