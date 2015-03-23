@@ -20,6 +20,7 @@ import (
 	"github.com/rakyll/globalconf"
 
 	"github.com/optiflows/tentacool/addresses"
+	"github.com/optiflows/tentacool/dhcp"
 	"github.com/optiflows/tentacool/dns"
 	"github.com/optiflows/tentacool/gateway"
 	"github.com/optiflows/tentacool/interfaces"
@@ -89,8 +90,8 @@ func main() {
 		&rest.Route{"PUT", "/addresses/:address", addresses.PutAddress},
 		&rest.Route{"DELETE", "/addresses/:address", addresses.DeleteAddress},
 
-		&rest.Route{"GET", "/dhcp", addresses.GetDhcp},
-		&rest.Route{"POST", "/dhcp", addresses.PostDhcp},
+		&rest.Route{"GET", "/dhcp", dhcp.GetDhcp},
+		&rest.Route{"POST", "/dhcp", dhcp.PostDhcp},
 
 		&rest.Route{"GET", "/dns", dns.GetDNS},
 		&rest.Route{"POST", "/dns", dns.PostDNS},
@@ -138,6 +139,9 @@ func main() {
 	}
 
 	if err := addresses.DBinit(db); err != nil {
+		log.Fatal(err)
+	}
+	if err := dhcp.DBinit(db); err != nil {
 		log.Fatal(err)
 	}
 	if err := dns.DBinit(db); err != nil {
