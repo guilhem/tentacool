@@ -30,6 +30,16 @@ gom build
 ./tentacool -help
 ```
 
+## Configuration
+
+Recommended `/etc/network/interfaces` config for your default interface (for instance `eth0`):
+```
+auto eth0
+iface eth0 inet manual
+   pre-up ifconfig $IFACE up
+   post-down ifconfig $IFACE down
+```
+
 ## API
 
 ### addresses
@@ -121,3 +131,22 @@ Modify an existing address
 * [address](#address)
 * headers
   * `X-Error`: if address is stored in BD but fail to by apply.
+
+
+### dhcp
+
+#### `GET /dhcp`
+
+Checks if DHCP is running on the default interface.
+
+##### Response
+
+`{'active': true|false}`
+
+#### `POST /dhcp`
+
+Activate/deactive DHCP for default interface.
+
+##### parameters
+
+* active `true` or `false`
