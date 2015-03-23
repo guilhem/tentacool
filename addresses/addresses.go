@@ -16,24 +16,25 @@ import (
 	"github.com/docker/libcontainer/network"
 )
 
-type Address struct {
+type addressStruct struct {
 	ID   string `json:"id"`
 	Link string `json:"link"`
 	IP   string `json:"ip"`
 }
 
 const (
-	defaultIface = "eth0"
+	defaultIface  = "eth0"
 	addressBucket = "address"
 )
 
 var db *bolt.DB
 
+// GetAddresses returns all registered addresses
 func GetAddresses(w rest.ResponseWriter, req *rest.Request) {
-	addresses := []Address{}
+	addresses := []addressStruct{}
 	err := db.View(func(tx *bolt.Tx) (err error) {
 		b := tx.Bucket([]byte(addressBucket))
-		address := Address{}
+		address := addressStruct{}
 		b.ForEach(func(k, v []byte) (err error) {
 			err = json.Unmarshal(v, &address)
 			if err != nil {
@@ -53,13 +54,14 @@ func GetAddresses(w rest.ResponseWriter, req *rest.Request) {
 	w.WriteJson(addresses)
 }
 
+// GetAddress returns the address with the specified ID
 func GetAddress(w rest.ResponseWriter, req *rest.Request) {
 	id := req.PathParam("address")
-	address := Address{}
+	address := addressStruct{}
 	err := db.View(func(tx *bolt.Tx) (err error) {
 		tmp := tx.Bucket([]byte(addressBucket)).Get([]byte(id))
 		if tmp == nil {
-			err = errors.New(fmt.Sprintf("ItemNotFound: Could not find address for %s in db", id))
+			err = fmt.Errorf("ItemNotFound: Could not find address for %s in db", id)
 			return
 		}
 		err = json.Unmarshal(tmp, &address)
@@ -73,14 +75,15 @@ func GetAddress(w rest.ResponseWriter, req *rest.Request) {
 		}
 		rest.Error(w, err.Error(), code)
 		return
-	} else {
-		log.Printf("GetAddress %s requested : %s", id, address)
-		w.WriteJson(address)
 	}
+
+	log.Printf("GetAddress %s requested : %s", id, address)
+	w.WriteJson(address)
 }
 
+// PostAddress register a new address
 func PostAddress(w rest.ResponseWriter, req *rest.Request) {
-	address := Address{}
+	address := addressStruct{}
 	if err := req.DecodeJsonPayload(&address); err != nil {
 		log.Printf(err.Error())
 		rest.Error(w, err.Error(), http.StatusInternalServerError)
@@ -133,14 +136,15 @@ func PostAddress(w rest.ResponseWriter, req *rest.Request) {
 		return
 	}
 
-	if err := SetIP(address); err != nil {
+	if err := setIP(address); err != nil {
 		w.Header().Set("X-ERROR", err.Error())
 	}
 	w.WriteJson(address)
 }
 
+// PutAddress modify the existing address with the specified ID
 func PutAddress(w rest.ResponseWriter, req *rest.Request) {
-	address := Address{}
+	address := addressStruct{}
 	if err := req.DecodeJsonPayload(&address); err != nil {
 		log.Printf(err.Error())
 		rest.Error(w, err.Error(), http.StatusInternalServerError)
@@ -149,13 +153,13 @@ func PutAddress(w rest.ResponseWriter, req *rest.Request) {
 	address.ID = req.PathParam("address")
 
 	// Removing the old interface address using netlink
-	oldAddress := Address{}
+	oldAddress := addressStruct{}
 	err := db.View(func(tx *bolt.Tx) (err error) {
 		tmp := tx.Bucket([]byte(addressBucket)).Get([]byte(address.ID))
 		if tmp != nil {
 			err = json.Unmarshal(tmp, &oldAddress)
 			if oldAddress != address {
-				err = DeleteIp(oldAddress)
+				err = deleteIP(oldAddress)
 			}
 		}
 		return
@@ -177,16 +181,17 @@ func PutAddress(w rest.ResponseWriter, req *rest.Request) {
 		return
 	}
 
-	if err = SetIP(address); err != nil {
+	if err = setIP(address); err != nil {
 		w.Header().Set("X-ERROR", err.Error())
 	}
 	w.WriteJson(address)
 }
 
+// DeleteAddress deletes the address with the specified ID
 func DeleteAddress(w rest.ResponseWriter, req *rest.Request) {
 	id := req.PathParam("address")
 
-	address := Address{}
+	address := addressStruct{}
 	err := db.View(func(tx *bolt.Tx) (err error) {
 		tmp := tx.Bucket([]byte(addressBucket)).Get([]byte(id))
 		err = json.Unmarshal(tmp, &address)
@@ -198,7 +203,7 @@ func DeleteAddress(w rest.ResponseWriter, req *rest.Request) {
 		return
 	}
 
-	if err = DeleteIp(address); err != nil {
+	if err = deleteIP(address); err != nil {
 		log.Printf(err.Error())
 		rest.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -216,8 +221,7 @@ func DeleteAddress(w rest.ResponseWriter, req *rest.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
-
-func SetIP(a Address) (err error) {
+func setIP(a addressStruct) (err error) {
 	log.Printf("Set IP:%s, to:%s", a.IP, a.Link)
 	err = network.SetInterfaceIp(a.Link, a.IP)
 	if err != nil {
@@ -228,7 +232,7 @@ func SetIP(a Address) (err error) {
 	return
 }
 
-func DeleteIp(a Address) (err error) {
+func deleteIP(a addressStruct) (err error) {
 	log.Printf("Deleting IP: %s, to:%s", a.IP, a.Link)
 	err = network.DeleteInterfaceIp(a.Link, a.IP)
 	if err != nil {
@@ -237,6 +241,7 @@ func DeleteIp(a Address) (err error) {
 	return
 }
 
+// CommandSetIP is a command-line tool to set an IP
 func CommandSetIP(id string, ip string) {
 	if _, _, err := net.ParseCIDR(ip); err != nil {
 		log.Printf(err.Error())
@@ -251,15 +256,15 @@ func CommandSetIP(id string, ip string) {
 		return
 	}
 
-	address := Address{ID: id, Link: "eth0", IP: ip}
+	address := addressStruct{ID: id, Link: "eth0", IP: ip}
 
-	oldAddress := Address{}
+	oldAddress := addressStruct{}
 	if err := db.View(func(tx *bolt.Tx) (err error) {
 		tmp := tx.Bucket([]byte(addressBucket)).Get([]byte(address.ID))
 		if tmp != nil {
 			err = json.Unmarshal(tmp, &oldAddress)
 			if oldAddress != address {
-				err = DeleteIp(oldAddress)
+				err = deleteIP(oldAddress)
 			}
 		}
 		return
@@ -281,9 +286,10 @@ func CommandSetIP(id string, ip string) {
 		return
 	}
 
-	SetIP(address)
+	setIP(address)
 }
 
+// DBinit initializes the addresses database at startup
 func DBinit(d *bolt.DB) (err error) {
 	db = d
 	err = db.Update(func(tx *bolt.Tx) (err error) {
@@ -298,12 +304,11 @@ func DBinit(d *bolt.DB) (err error) {
 		b := tx.Bucket([]byte(addressBucket))
 
 		log.Printf("Reinstall previous address from DB")
-		address := Address{}
+		address := addressStruct{}
 		b.ForEach(func(k, v []byte) (err error) {
 			if err := json.Unmarshal(v, &address); err != nil {
 				log.Printf(err.Error())
-			} else
-			if err := SetIP(address); err != nil {
+			} else if err := setIP(address); err != nil {
 				log.Printf(err.Error())
 			}
 			return

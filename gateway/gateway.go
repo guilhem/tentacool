@@ -2,7 +2,6 @@ package gateway
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -20,13 +19,14 @@ const (
 
 var db *bolt.DB
 
-type Gateway struct {
+type gatewayStruct struct {
 	IP   string `json:"ip"`
 	Link string `json:"link"`
 }
 
+// PostGateway apply the given gateway to the network
 func PostGateway(w rest.ResponseWriter, req *rest.Request) {
-	gateway := Gateway{}
+	gateway := gatewayStruct{}
 	if err := req.DecodeJsonPayload(&gateway); err != nil {
 		log.Printf(err.Error())
 		rest.Error(w, err.Error(), http.StatusInternalServerError)
@@ -52,12 +52,13 @@ func PostGateway(w rest.ResponseWriter, req *rest.Request) {
 	w.WriteJson(gateway)
 }
 
+// GetGateway returns the list of all gateways
 func GetGateway(w rest.ResponseWriter, req *rest.Request) {
-	gateway := Gateway{}
+	gateway := gatewayStruct{}
 	err := db.View(func(tx *bolt.Tx) (err error) {
 		tmp := tx.Bucket([]byte(routesBucket)).Get([]byte(defaultKey))
 		if tmp == nil {
-			err = errors.New(fmt.Sprintf("ItemNotFound: Could not find gateway"))
+			err = fmt.Errorf("ItemNotFound: Could not find gateway")
 			return
 		}
 		err = json.Unmarshal(tmp, &gateway)
@@ -71,12 +72,12 @@ func GetGateway(w rest.ResponseWriter, req *rest.Request) {
 		}
 		rest.Error(w, err.Error(), code)
 		return
-	} else {
-		log.Printf("Requested Gateways list : %s", gateway)
-		w.WriteJson(gateway)
 	}
+	log.Printf("Requested Gateways list : %s", gateway)
+	w.WriteJson(gateway)
 }
 
+// DBinit initializes the gateway database at startup
 func DBinit(d *bolt.DB) (err error) {
 	db = d
 	err = db.Update(func(tx *bolt.Tx) (err error) {
@@ -90,7 +91,7 @@ func DBinit(d *bolt.DB) (err error) {
 	log.Printf("Reinstall previous gateway from DB")
 	err = db.View(func(tx *bolt.Tx) (err error) {
 		b := tx.Bucket([]byte(routesBucket))
-		gateway := Gateway{}
+		gateway := gatewayStruct{}
 		v := b.Get([]byte(defaultKey))
 		if v != nil {
 			if err := json.Unmarshal(v, &gateway); err != nil {

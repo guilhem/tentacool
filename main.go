@@ -96,7 +96,7 @@ func main() {
 		&rest.Route{"GET", "/dns", dns.GetDNS},
 		&rest.Route{"POST", "/dns", dns.PostDNS},
 
-		&rest.Route{"GET", "/routes", GetRoutes},
+		&rest.Route{"GET", "/routes", getRoutes},
 		&rest.Route{"POST", "/routes/gateway", gateway.PostGateway},
 		&rest.Route{"GET", "/routes/gateway", gateway.GetGateway},
 	)
@@ -168,7 +168,7 @@ func main() {
 	log.Fatal(http.Serve(ln, api.MakeHandler()))
 }
 
-func GetRoutes(w rest.ResponseWriter, req *rest.Request) {
+func getRoutes(w rest.ResponseWriter, req *rest.Request) {
 	routes, err := netlink.NetworkGetRoutes()
 	if err != nil {
 		log.Printf(err.Error())
