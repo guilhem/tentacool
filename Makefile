@@ -8,7 +8,7 @@ GO := env GOPATH="${GOPATH}" go
 build:
 	# Copy current branch additional packages into GOPATH
 	@mkdir -p ${TENTACOOLPATH}
-	@cp -rf addresses dns interfaces gateway ${TENTACOOLPATH}
+	@cp -rf addresses dns interfaces gateway dhcp ${TENTACOOLPATH}
 	# Install gom
 	@${GO} get github.com/mattn/gom
 	# Build tentacool using gom
