@@ -14,6 +14,8 @@ import (
 	"github.com/boltdb/bolt"
 	"github.com/docker/libcontainer/netlink"
 	"github.com/docker/libcontainer/network"
+
+	"github.com/optiflows/tentacool/dhcp"
 )
 
 type addressStruct struct {
@@ -159,11 +161,18 @@ func PutAddress(w rest.ResponseWriter, req *rest.Request) {
 		if tmp != nil {
 			err = json.Unmarshal(tmp, &oldAddress)
 			if oldAddress != address {
-				err = deleteIP(oldAddress)
+				_ = deleteIP(oldAddress)
+			}
+			if err != nil {
+				log.Printf(err.Error())
 			}
 		}
 		return
 	})
+
+	if err != nil {
+		log.Printf(err.Error())
+	}
 
 	err = db.Update(func(tx *bolt.Tx) (err error) {
 		b := tx.Bucket([]byte(addressBucket))
@@ -242,7 +251,7 @@ func deleteIP(a addressStruct) (err error) {
 }
 
 // CommandSetIP is a command-line tool to set an IP
-func CommandSetIP(id string, ip string) {
+func CommandSetIP(id string, link string, ip string) {
 	if _, _, err := net.ParseCIDR(ip); err != nil {
 		log.Printf(err.Error())
 		return
@@ -256,7 +265,7 @@ func CommandSetIP(id string, ip string) {
 		return
 	}
 
-	address := addressStruct{ID: id, Link: "eth0", IP: ip}
+	address := addressStruct{ID: id, Link: link, IP: ip}
 
 	oldAddress := addressStruct{}
 	if err := db.View(func(tx *bolt.Tx) (err error) {
@@ -286,7 +295,14 @@ func CommandSetIP(id string, ip string) {
 		return
 	}
 
-	setIP(address)
+	if err := dhcp.SetDhcp(false, link); err != nil {
+		log.Printf(err.Error())
+		return
+	}
+	if err := setIP(address); err != nil {
+		log.Printf(err.Error())
+		return
+	}
 }
 
 // DBinit initializes the addresses database at startup
