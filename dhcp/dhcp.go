@@ -46,7 +46,7 @@ func GetDhcp(w rest.ResponseWriter, req *rest.Request) {
 	w.WriteJson(dhcp)
 }
 
-// PostDhcp changes set or unset the DHCP client (using system)
+// PostDhcp set or unset the DHCP client via RESTful request
 func PostDhcp(w rest.ResponseWriter, req *rest.Request) {
 	// Parameters
 	dhcp := dhcpStruct{}
@@ -61,7 +61,7 @@ func PostDhcp(w rest.ResponseWriter, req *rest.Request) {
 	}
 
 	// Activate/deactivate dhcp client
-	if err := setDhcp(dhcp.Active, dhcp.Interface); err != nil {
+	if err := SetDhcp(dhcp.Active, dhcp.Interface); err != nil {
 		log.Printf(err.Error())
 		rest.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -87,7 +87,8 @@ func PostDhcp(w rest.ResponseWriter, req *rest.Request) {
 	w.WriteJson(dhcp)
 }
 
-func setDhcp(active bool, iface string) (err error) {
+// SetDhcp set or unset the DHCP client (using system)
+func SetDhcp(active bool, iface string) (err error) {
 	if active {
 		log.Printf("Starting DHCP client")
 		err = exec.Command("sh", "-c", fmt.Sprintf("/sbin/dhclient %s &", iface)).Run()
@@ -122,7 +123,7 @@ func DBinit(d *bolt.DB) (err error) {
 		if tmp != nil {
 			if err := json.Unmarshal(tmp, &dhcp); err != nil {
 				log.Printf(err.Error())
-			} else if err := setDhcp(dhcp.Active, dhcp.Interface); err != nil {
+			} else if err := SetDhcp(dhcp.Active, dhcp.Interface); err != nil {
 				log.Printf(err.Error())
 			}
 		}

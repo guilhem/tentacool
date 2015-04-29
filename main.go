@@ -70,11 +70,11 @@ func main() {
 			log.Fatal(err)
 		}
 		splited := strings.Split(*flagSetIP, ":")
-		if len(splited) < 2 {
-			log.Fatal("ID:CIDR required")
+		if len(splited) < 3 {
+			log.Fatal("ID:Link:CIDR required")
 		}
-		id, ip := splited[0], splited[1]
-		addresses.CommandSetIP(id, ip)
+		id, link, ip := splited[0], splited[1], splited[2]
+		addresses.CommandSetIP(id, link, ip)
 		os.Exit(0)
 	}
 
@@ -138,10 +138,10 @@ func main() {
 		}
 	}
 
-	if err := addresses.DBinit(db); err != nil {
+	if err := dhcp.DBinit(db); err != nil {
 		log.Fatal(err)
 	}
-	if err := dhcp.DBinit(db); err != nil {
+	if err := addresses.DBinit(db); err != nil {
 		log.Fatal(err)
 	}
 	if err := dns.DBinit(db); err != nil {
