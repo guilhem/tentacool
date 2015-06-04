@@ -1,7 +1,8 @@
 # tentacool
-[![Gobuild Download](https://img.shields.io/badge/gobuild-download-green.svg?style=flat)](http://gobuild.io/github.com/optiflows/tentacool)
+[![Build Status](https://drone.io/github.com/optiflows/tentacool/status.png)](https://drone.io/github.com/optiflows/tentacool/latest)
 [![Go Walker](https://img.shields.io/badge/GoWalker-Doc-blue.svg?style=flat)](https://gowalker.org/github.com/optiflows/tentacool)
 [![Go report](http://goreportcard.com/badge/optiflows/tentacool)](http://goreportcard.com/report/optiflows/tentacool)
+
 
 ## Description
 
@@ -20,6 +21,8 @@ Be sure to set the correct GOPATH and GOROOT environment variables.
 You can make use of [godeb](https://github.com/niemeyer/godeb) which set you up with the version of Go you want. (Tentacool is using >= 1.2)
 
 Build Tentacool with [gom](https://github.com/mattn/gom) or [gopm](https://github.com/gpmgo/gopm) with the given `Gomfile` and `.gopmfile`.
+
+An automatic of the executable from master branch can also be found [on drone.io](https://drone.io/github.com/optiflows/tentacool/files).
 
 ### Example with `gom`
 
