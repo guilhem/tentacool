@@ -15,7 +15,7 @@ import (
 	"github.com/docker/libcontainer/netlink"
 	"github.com/docker/libcontainer/network"
 
-	"github.com/optiflows/tentacool/dhcp"
+	"dhcp"
 )
 
 type addressStruct struct {

@@ -19,11 +19,11 @@ import (
 	"github.com/docker/libcontainer/netlink"
 	"github.com/rakyll/globalconf"
 
-	"github.com/optiflows/tentacool/addresses"
-	"github.com/optiflows/tentacool/dhcp"
-	"github.com/optiflows/tentacool/dns"
-	"github.com/optiflows/tentacool/gateway"
-	"github.com/optiflows/tentacool/interfaces"
+	"addresses"
+	"dhcp"
+	"dns"
+	"gateway"
+	"interfaces"
 )
 
 const (

@@ -1,0 +1,63 @@
+{
+	"version": 0,
+	"dependencies": [
+		{
+			"importpath": "github.com/ant0ine/go-json-rest/rest",
+			"repository": "https://github.com/ant0ine/go-json-rest",
+			"revision": "7570c97644513f16a0c141336f22910474f8c024",
+			"branch": "HEAD",
+			"path": "/rest"
+		},
+		{
+			"importpath": "github.com/boltdb/bolt",
+			"repository": "https://github.com/boltdb/bolt",
+			"revision": "aa66506030b376f848667d84d2596faa8a7099ea",
+			"branch": "HEAD"
+		},
+		{
+			"importpath": "github.com/codegangsta/cli",
+			"repository": "https://github.com/codegangsta/cli",
+			"revision": "0302d3914d2a6ad61404584cdae6e6dbc9c03599",
+			"branch": "master"
+		},
+		{
+			"importpath": "github.com/docker/libcontainer/netlink",
+			"repository": "https://github.com/docker/libcontainer",
+			"revision": "83a102cc68a09d890cce3b6c2e5c14c49e6373a0",
+			"branch": "master",
+			"path": "/netlink"
+		},
+		{
+			"importpath": "github.com/docker/libcontainer/network",
+			"repository": "https://github.com/docker/libcontainer",
+			"revision": "c3ab8d0cb4b439b7691edf7b63fcecd169834250",
+			"branch": "HEAD",
+			"path": "/network"
+		},
+		{
+			"importpath": "github.com/docker/libcontainer/utils",
+			"repository": "https://github.com/docker/libcontainer",
+			"revision": "83a102cc68a09d890cce3b6c2e5c14c49e6373a0",
+			"branch": "master",
+			"path": "/utils"
+		},
+		{
+			"importpath": "github.com/guilhem/dnsconfig",
+			"repository": "https://github.com/guilhem/dnsconfig",
+			"revision": "da37b1b812b3c5064f3fa43daed251f26172d5db",
+			"branch": "HEAD"
+		},
+		{
+			"importpath": "github.com/rakyll/globalconf",
+			"repository": "https://github.com/rakyll/globalconf",
+			"revision": "415abc325023f1a00cd2d9fa512e0e71745791a2",
+			"branch": "master"
+		},
+		{
+			"importpath": "github.com/rakyll/goini",
+			"repository": "https://github.com/rakyll/goini",
+			"revision": "907cca0f578a5316fb864ec6992dc3d9730ec58c",
+			"branch": "master"
+		}
+	]
+}
