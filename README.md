@@ -20,17 +20,20 @@ So many software do frontend, backend and system... And finally run in `root` by
 Be sure to set the correct GOPATH and GOROOT environment variables.
 You can make use of [godeb](https://github.com/niemeyer/godeb) which set you up with the version of Go you want. (Tentacool is using >= 1.2)
 
-Build Tentacool with [gom](https://github.com/mattn/gom) or [gopm](https://github.com/gpmgo/gopm) with the given `Gomfile` and `.gopmfile`.
+Build Tentacool using [gb](https://getgb.io/).
 
 An automatic of the executable from master branch can also be found [on drone.io](https://drone.io/github.com/optiflows/tentacool/files).
 
-### Example with `gom`
+### How-to `GB`
 
-```
-go get github.com/mattn/gom
-gom install
-gom build
-./tentacool -help
+```bash
+# Get GB
+go get github.com/constabulary/gb/...
+# Fetch dependencies
+gb vendor restore
+# Build tentacool
+gb build
+./bin/tentacool -help
 ```
 
 ## Configuration
@@ -39,8 +42,8 @@ Recommended `/etc/network/interfaces` config for your default interface (for ins
 ```
 auto eth0
 iface eth0 inet manual
-   pre-up ifconfig $IFACE up
-   post-down ifconfig $IFACE down
+  pre-up ifconfig $IFACE up
+  post-down ifconfig $IFACE down
 ```
 
 ## API
