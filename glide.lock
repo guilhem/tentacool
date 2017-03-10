@@ -1,5 +1,5 @@
-hash: 66b20cdd0b9b74a4bcec8c21d077527400d506a2f9a6bddf5cd029f59dec21f0
-updated: 2017-03-10T10:41:19.23831304+01:00
+hash: 3945a61e5c792169fd574ee900e3ab77186426d6174dd388b7deb5606a31e385
+updated: 2017-03-10T14:21:47.780192382+01:00
 imports:
 - name: github.com/ant0ine/go-json-rest
   version: ce4b71cdf7ba29ef443d704bd923f5bbf281ee30
@@ -39,6 +39,10 @@ imports:
   version: 13d49d4606eb801b8f01ae542b4afc4c6ee3d84a
 - name: github.com/rakyll/globalconf
   version: 7afbf15d8da4ed30174874a9db565d16755e99f7
+- name: github.com/Sirupsen/logrus
+  version: 0208149b40d863d2c1a2f8fe5753096a9cf2cc8b
+  subpackages:
+  - hooks/syslog
 - name: github.com/spf13/afero
   version: 9be650865eab0c12963d8753212f4f9c66cdcf12
   subpackages:

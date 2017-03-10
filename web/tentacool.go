@@ -1,8 +1,6 @@
 package web
 
 import (
-	"log"
-	"log/syslog"
 	"net"
 	"net/http"
 	"os"
@@ -12,6 +10,8 @@ import (
 	"strings"
 	"syscall"
 	"time"
+
+	log "github.com/Sirupsen/logrus"
 
 	"github.com/ant0ine/go-json-rest/rest"
 	"github.com/boltdb/bolt"
@@ -41,20 +41,13 @@ func Web(cmd *cobra.Command, args []string) {
 
 	conf, err := globalconf.New(appName)
 	if err != nil {
-		log.Fatal(err)
+		log.WithError(err).Fatal()
 	}
 	conf.ParseAll()
 
-	if viper.GetBool("stdout") == false {
-		logwriter, err := syslog.New(syslog.LOG_NOTICE, appName)
-		if err == nil {
-			log.SetOutput(logwriter)
-		}
-	}
-
 	db, err := bolt.Open(viper.GetString("db"), 0600, &bolt.Options{Timeout: 1 * time.Second})
 	if err != nil {
-		log.Fatal(err)
+		log.WithError(err).Fatal()
 	}
 	defer db.Close()
 
@@ -107,18 +100,18 @@ func Web(cmd *cobra.Command, args []string) {
 	}
 	ln, err = net.Listen(network, viper.GetString("bind"))
 	if nil != err {
-		log.Fatal(err)
+		log.WithError(err).Fatal()
 	}
 	defer ln.Close()
 
 	if viper.GetString("owner") != "" && network == "unix" {
 		user, err := user.Lookup(viper.GetString("owner"))
 		if err != nil {
-			log.Fatal(err)
+			log.WithError(err).Fatal()
 		}
 		uid, err := strconv.Atoi(user.Uid)
 		if err != nil {
-			log.Fatal(err)
+			log.WithError(err).Fatal()
 		}
 		var gid int
 		if viper.GetInt("group") != -1 {
@@ -126,28 +119,28 @@ func Web(cmd *cobra.Command, args []string) {
 		} else {
 			gid, err = strconv.Atoi(user.Gid)
 			if err != nil {
-				log.Fatal(err)
+				log.WithError(err).Fatal()
 			}
 		}
 		if err := os.Chown(viper.GetString("bind"), uid, gid); err != nil {
-			log.Fatal(err)
+			log.WithError(err).Fatal()
 		}
 		if err := os.Chmod(viper.GetString("bind"), 0660); err != nil {
-			log.Fatal(err)
+			log.WithError(err).Fatal()
 		}
 	}
 
 	if err := dhcp.DBinit(db); err != nil {
-		log.Fatal(err)
+		log.WithError(err).Fatal()
 	}
 	if err := addresses.DBinit(db); err != nil {
-		log.Fatal(err)
+		log.WithError(err).Fatal()
 	}
 	if err := dns.DBinit(db); err != nil {
-		log.Fatal(err)
+		log.WithError(err).Fatal()
 	}
 	if err := gateway.DBinit(db); err != nil {
-		log.Fatal(err)
+		log.WithError(err).Fatal()
 	}
 
 	// Handle common process-killing signals so we can gracefully shut down:

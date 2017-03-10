@@ -16,8 +16,12 @@ package cmd
 
 import (
 	"fmt"
+	"log/syslog"
 	"os"
 
+	log "github.com/Sirupsen/logrus"
+
+	logrus_syslog "github.com/Sirupsen/logrus/hooks/syslog"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -34,19 +38,39 @@ examples and usage of using your application. For example:
 Cobra is a CLI library for Go that empowers applications.
 This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
+
+	PersistentPreRun: func(cmd *cobra.Command, _ []string) {
+		log.SetOutput(os.Stderr)
+		level, err := log.ParseLevel(viper.GetString("log-level"))
+		if err != nil {
+			log.WithError(err).Fatal("Logrus: ParseLevel")
+		}
+		log.SetLevel(level)
+		log.SetOutput(os.Stdout)
+		if hook, err := logrus_syslog.NewSyslogHook("", "", syslog.LOG_INFO, ""); err == nil {
+			log.AddHook(hook)
+		} else {
+			log.WithError(err).Info("Failing to add syslog hook")
+		}
+	},
 }
 
 // Execute adds all child commands to the root command sets flags appropriately.
 // This is called by main.main(). It only needs to happen once to the rootCmd.
 func Execute() {
 	if err := RootCmd.Execute(); err != nil {
-		fmt.Println(err)
+		log.WithError(err)
 		os.Exit(-1)
 	}
 }
 
 func init() {
 	cobra.OnInitialize(initConfig)
+
+	RootCmd.PersistentFlags().String("log-level", "info", "one of debug, info, warn, error, or fatal")
+	if err := viper.BindPFlag("log-level", RootCmd.PersistentFlags().Lookup("log-level")); err != nil {
+		log.WithError(err).Fatal("log-level")
+	}
 
 	RootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.tentacool.yaml)")
 

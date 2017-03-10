@@ -2,8 +2,9 @@ package dns
 
 import (
 	"encoding/json"
-	"log"
 	"net/http"
+
+	log "github.com/Sirupsen/logrus"
 
 	"github.com/ant0ine/go-json-rest/rest"
 	"github.com/boltdb/bolt"

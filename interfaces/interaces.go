@@ -1,9 +1,10 @@
 package interfaces
 
 import (
-	"log"
 	"net"
 	"net/http"
+
+	log "github.com/Sirupsen/logrus"
 
 	"github.com/ant0ine/go-json-rest/rest"
 )
