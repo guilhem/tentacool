@@ -27,7 +27,7 @@ func GetDNS(w rest.ResponseWriter, req *rest.Request) {
 		rest.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	log.Printf("Request DNS list : %s", dns)
+	log.Printf("Request DNS list : %v", dns)
 	w.WriteJson(dns)
 }
 

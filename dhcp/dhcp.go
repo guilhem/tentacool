@@ -43,7 +43,7 @@ func GetDhcp(w rest.ResponseWriter, req *rest.Request) {
 		rest.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	log.Printf("GetDhcp requested: %s", dhcp)
+	log.Printf("GetDhcp requested: %v", dhcp)
 	w.WriteJson(dhcp)
 }
 

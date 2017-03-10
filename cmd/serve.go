@@ -29,14 +29,8 @@ const (
 // serveCmd represents the serve command
 var serveCmd = &cobra.Command{
 	Use:   "serve",
-	Short: "A brief description of your command",
-	Long: `A longer description that spans multiple lines and likely contains examples
-and usage of using your command. For example:
-
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
-	Run: web.Web,
+	Short: "Run server",
+	Run:   web.Web,
 }
 
 func init() {
@@ -45,7 +39,7 @@ func init() {
 	serveCmd.Flags().String("setip", "", "CLI to set an IP without launching the Tentacool server ('ID:CIDR')")
 	viper.BindPFlag("setip", serveCmd.Flags().Lookup("setip"))
 
-	serveCmd.Flags().String("bind", "/var/run/"+appName, "Adress to bind. Format Path or IP:PORT")
+	serveCmd.Flags().String("bind", "/var/run/"+appName, "Address to bind. Format Path or IP:PORT")
 	viper.BindPFlag("bind", serveCmd.Flags().Lookup("bind"))
 
 	serveCmd.Flags().String("owner", "tentacool", "Ownership for socket")
