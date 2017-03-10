@@ -1,0 +1,20 @@
+package: github.com/guilhem/tentacool
+import:
+- package: github.com/ant0ine/go-json-rest
+  version: ~3.3.2
+  subpackages:
+  - rest
+- package: github.com/boltdb/bolt
+  version: ~1.3.0
+- package: github.com/guilhem/dnsconfig
+  version: ~0.4.0
+  subpackages:
+  - resolvconf
+- package: github.com/rakyll/globalconf
+- package: github.com/spf13/cobra
+- package: github.com/spf13/viper
+- package: github.com/vishvananda/netlink
+- package: github.com/Sirupsen/logrus
+  version: ~0.11.4
+  subpackages:
+  - hooks/syslog

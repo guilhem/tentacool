@@ -1,0 +1,21 @@
+language: go
+go_import_path: github.com/guilhem/tentacool
+go:
+- '1.8'
+
+install: true
+script: go test -v $(go list ./... | grep -v vendor)
+
+before_deploy:
+- go get github.com/mitchellh/gox
+- gox -output="bin/{{.Dir}}_{{.OS}}_{{.Arch}}"
+
+deploy:
+  provider: releases
+  api_key:
+    secure: hDIi1Fv9nodfXzT/z3hx+DnzOnoGrqZ1Wf+c4f/cm8c+8St8m815Ne3jy7rbfFeKempGyjGYzGIN1AQcWedad2o+JMSNg5JBUhdlRhfQG8+AAHX3PXWrPiHXX215wlJb/t3TV5zD2OlGI43wSYySTKKA/mz/QP2FixOPNCwYD5Y=
+  skip_cleanup: true
+  file: bin/*
+  file_glob: true
+  on:
+    tags: true

@@ -1,7 +1,6 @@
 # tentacool
-[![Build Status](https://drone.io/github.com/optiflows/tentacool/status.png)](https://drone.io/github.com/optiflows/tentacool/latest)
-[![Go Walker](https://img.shields.io/badge/GoWalker-Doc-blue.svg?style=flat)](https://gowalker.org/github.com/optiflows/tentacool)
-[![Go report](http://goreportcard.com/badge/optiflows/tentacool)](http://goreportcard.com/report/optiflows/tentacool)
+[![Build Status](https://travis-ci.org/guilhem/tentacool.svg?branch=master)](https://travis-ci.org/guilhem/tentacool)
+[![Go report](http://goreportcard.com/badge/guilhem/tentacool)](http://goreportcard.com/report/guilhem/tentacool)
 
 
 ## Description
@@ -14,27 +13,6 @@ Main goal is to manage all under the hood services for a simple "box".
 All done with a auditable, fast and bulletproof software.
 
 So many software do frontend, backend and system... And finally run in `root` by easiness.
-
-## To build
-
-Be sure to set the correct GOPATH and GOROOT environment variables.
-You can make use of [godeb](https://github.com/niemeyer/godeb) which set you up with the version of Go you want. (Tentacool is using >= 1.2)
-
-Build Tentacool using [gb](https://getgb.io/).
-
-An automatic of the executable from master branch can also be found [on drone.io](https://drone.io/github.com/optiflows/tentacool/files).
-
-### How-to `GB`
-
-```bash
-# Get GB
-go get github.com/constabulary/gb/...
-# Fetch dependencies
-gb vendor restore
-# Build tentacool
-gb build
-./bin/tentacool -help
-```
 
 ## Configuration
 
