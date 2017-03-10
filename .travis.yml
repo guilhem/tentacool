@@ -8,7 +8,7 @@ script: go test -v $(go list ./... | grep -v vendor)
 
 before_deploy:
 - go get github.com/mitchellh/gox
-- gox -output="bin/{{.Dir}}_{{.OS}}_{{.Arch}}"
+- gox -os=linux -output="bin/{{.Dir}}_{{.OS}}_{{.Arch}}"
 
 deploy:
   provider: releases
